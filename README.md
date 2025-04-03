@@ -11,6 +11,16 @@ A Model Context Protocol (MCP) server implementation that integrates with Searxn
 
 ## Installation
 
+### Installing via Smithery
+
+To install OneSearch for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@yokingma/one-search):
+
+```bash
+npx -y @smithery/cli install @yokingma/one-search --client claude
+```
+
+### Manual Installation
+
 ```shell
 # Manually install (Optional)
 npm install -g one-search-mcp
