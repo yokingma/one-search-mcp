@@ -1,0 +1,45 @@
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    required: []
+    properties:
+      searchProvider:
+        type: string
+        default: searxng
+        description: "Search provider to use. Options: searxng, duckduckgo, bing, tavily."
+      searchApiUrl:
+        type: string
+        description: API URL for the search provider (required for searxng).
+      searchApiKey:
+        type: string
+        description: API Key for the search provider (required for tavily or bing).
+      firecrawlApiUrl:
+        type: string
+        description: API URL for firecrawl.
+      firecrawlApiKey:
+        type: string
+        description: API Key for firecrawl if required.
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'node',
+      args: ['dist/index.js'],
+      env: {
+        SEARCH_PROVIDER: config.searchProvider || 'searxng',
+        SEARCH_API_URL: config.searchApiUrl || '',
+        SEARCH_API_KEY: config.searchApiKey || '',
+        FIRECRAWL_API_URL: config.firecrawlApiUrl || '',
+        FIRECRAWL_API_KEY: config.firecrawlApiKey || ''
+      }
+    })
+  exampleConfig:
+    searchProvider: searxng
+    searchApiUrl: http://127.0.0.1:8080
+    searchApiKey: YOUR_API_KEY
+    firecrawlApiUrl: http://127.0.0.1:3002
+    firecrawlApiKey: YOUR_API_KEY
