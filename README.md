@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/yokingma-one-search-mcp-badge.png)](https://mseep.ai/app/yokingma-one-search-mcp)
+
 # 🚀 OneSearch MCP Server: Web Search & Crawl & Scraper & Extract
 
 A Model Context Protocol (MCP) server implementation that integrates with Searxng/Tavily/DuckDuckGo/Bing for web search, local browser search, and scraping capabilities with Firecrawl.
