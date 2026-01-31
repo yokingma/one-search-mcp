@@ -11,9 +11,9 @@ A Model Context Protocol (MCP) server implementation that integrates with Searxn
   - Free, no API keys required.
 - **Enabled tools:** `one_search`, `one_scrape`, `one_map`, `one_extract`
 
-## Migration from v1.0.10 and Earlier
+## Migration from v1.1.0 and Earlier
 
-**Breaking Changes in v1.0.11:**
+**Breaking Changes in v1.1.0:**
 
 - **Firecrawl Removed**: The Firecrawl integration has been removed in favor of `agent-browser`, which provides similar functionality without requiring external API services.
 - **New Browser Requirement**: You must install Chromium browser (see Prerequisites section).
