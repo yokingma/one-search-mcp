@@ -7,10 +7,9 @@ A Model Context Protocol (MCP) server implementation that integrates with Searxn
 - Web Search, scrape, crawl and extract content from websites.
 - Support multiple search engines and web scrapers: **SearXNG**, **Tavily**, **DuckDuckGo**, **Bing**, etc.
 - **Local web search** (browser search), support multiple search engines: **Bing**, **Google**, **Baidu**, **Sogou**, etc.
-  - Use `agent-browser` + `playwright-core` for browser automation.
+  - Use `agent-browser` for browser automation.
   - Free, no API keys required.
 - **Enabled tools:** `one_search`, `one_scrape`, `one_map`, `one_extract`
-- Support for self-hosted: SearXNG, etc. (see [Deploy](./deploy/README.md))
 
 ## Migration from v1.0.10 and Earlier
 
@@ -22,7 +21,7 @@ A Model Context Protocol (MCP) server implementation that integrates with Searxn
 
 **What Changed:**
 
-- `one_scrape` and `one_map` now use `agent-browser` with Playwright instead of Firecrawl
+- `one_scrape` and `one_map` now use `agent-browser` instead of Firecrawl
 - `one_extract` tool is now fully implemented for structured data extraction from multiple URLs
 - All browser-based operations are now handled locally, providing better privacy and no API costs
 
@@ -52,30 +51,36 @@ A Model Context Protocol (MCP) server implementation that integrates with Searxn
 # Option 2: Install Microsoft Edge
 # Download from: https://www.microsoft.com/edge
 
-# Option 3: Install via Playwright
-npx playwright install chromium
+# Option 3: Install Chromium via agent-browser
+npx agent-browser install
+
+# Option 4: Install Chromium directly
+# Download from: https://www.chromium.org/getting-involved/download-chromium/
 ```
 
 ## Installation
 
-### Installing via Smithery
-
-To install OneSearch for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@yokingma/one-search):
+### Using Claude Code CLI (Recommended)
 
 ```bash
-npx -y @smithery/cli install @yokingma/one-search --client claude
+# Add to Claude Code with default settings (local search)
+claude mcp add one-search-mcp -- npx -y one-search-mcp
+
+# Add with custom search provider (e.g., SearXNG)
+claude mcp add -e SEARCH_PROVIDER=searxng -e SEARCH_API_URL=http://127.0.0.1:8080 one-search-mcp -- npx -y one-search-mcp
+
+# Add with Tavily API
+claude mcp add -e SEARCH_PROVIDER=tavily -e SEARCH_API_KEY=your_api_key one-search-mcp -- npx -y one-search-mcp
 ```
 
 ### Manual Installation
 
-```shell
-# Manually install (Optional)
+```bash
+# Install globally (Optional)
 npm install -g one-search-mcp
-```
 
-```shell
-# using npx
-env SEARCH_API_URL=http://127.0.0.1:8080 npx -y one-search-mcp
+# Or run directly with npx
+npx -y one-search-mcp
 ```
 
 ## Environment Variables
@@ -91,29 +96,14 @@ env SEARCH_API_URL=http://127.0.0.1:8080 npx -y one-search-mcp
 export type SearchProvider = 'searxng' | 'duckduckgo' | 'bing' | 'tavily' | 'local';
 ```
 
-## Running on Cursor
+## Configuration for Other MCP Clients
 
-Your `mcp.json` file will look like this:
+### Claude Desktop
 
-```json
-{
-  "mcpServers": {
-    "one-search-mcp": {
-      "command": "npx",
-      "args": ["-y", "one-search-mcp"],
-      "env": {
-        "SEARCH_PROVIDER": "local",
-        "SEARCH_API_URL": "http://127.0.0.1:8080",
-        "SEARCH_API_KEY": "YOUR_API_KEY"
-      }
-    }
-  }
-}
-```
+Add to your Claude Desktop configuration file:
 
-## Running on Windsurf
-
-Add this to your `./codeium/windsurf/model_config.json` file:
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -122,18 +112,80 @@ Add this to your `./codeium/windsurf/model_config.json` file:
       "command": "npx",
       "args": ["-y", "one-search-mcp"],
       "env": {
-        "SEARCH_PROVIDER": "local",
-        "SEARCH_API_URL": "http://127.0.0.1:8080",
-        "SEARCH_API_KEY": "YOUR_API_KEY"
+        "SEARCH_PROVIDER": "local"
       }
     }
   }
 }
 ```
 
-## Self-host
+### Cursor
 
-Local deployment of SearXNG, please refer to [Deploy](./deploy/README.md)
+Add to your `mcp.json` file:
+
+```json
+{
+  "mcpServers": {
+    "one-search-mcp": {
+      "command": "npx",
+      "args": ["-y", "one-search-mcp"],
+      "env": {
+        "SEARCH_PROVIDER": "local"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to your `./codeium/windsurf/model_config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "one-search-mcp": {
+      "command": "npx",
+      "args": ["-y", "one-search-mcp"],
+      "env": {
+        "SEARCH_PROVIDER": "local"
+      }
+    }
+  }
+}
+```
+
+## Self-hosting SearXNG (Optional)
+
+If you want to use SearXNG as your search provider, you can deploy it locally using Docker:
+
+**Prerequisites:**
+
+- Docker installed and running (version 20.10.0 or higher)
+- At least 4GB of RAM available
+
+**Quick Start:**
+
+```bash
+# Clone SearXNG Docker repository
+git clone https://github.com/searxng/searxng-docker.git
+cd searxng-docker
+
+# Start SearXNG
+docker compose up -d
+```
+
+After deployment, SearXNG will be available at `http://127.0.0.1:8080` by default.
+
+**Configure OneSearch to use SearXNG:**
+
+```bash
+# Set environment variables
+export SEARCH_PROVIDER=searxng
+export SEARCH_API_URL=http://127.0.0.1:8080
+```
+
+For more details, see the [official SearXNG Docker documentation](https://github.com/searxng/searxng-docker).
 
 ## Troubleshooting
 
@@ -145,15 +197,11 @@ If you see an error like "Browser not found", the server couldn't detect any ins
 - **Microsoft Edge**: <https://www.microsoft.com/edge>
 - **Chromium**: <https://www.chromium.org/getting-involved/download-chromium/>
 
-Or install via Playwright:
+Or install via agent-browser:
 
 ```bash
-npx playwright install chromium
+npx agent-browser install
 ```
-
-### Other issues
-
-- [ReferenceError]: __name is not defined: This is because Puppeteer has problems with `tsx`, [esbuild#1031](https://github.com/evanw/esbuild/issues/1031)
 
 ## License
 
