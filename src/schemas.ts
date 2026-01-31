@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 // Search Schema
 export const SearchSchema = z.object({
@@ -120,3 +120,5 @@ export const ExtractSchema = z.object({
   enableWebSearch: z.boolean().optional().describe('Enable web search for additional context'),
   includeSubdomains: z.boolean().optional().describe('Include subdomains in extraction'),
 });
+
+export type ExtractInput = z.infer<typeof ExtractSchema>;

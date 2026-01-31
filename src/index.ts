@@ -5,12 +5,13 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ISearchRequestOptions, ISearchResponse, SearchProvider } from './interface.js';
 import { bingSearch, duckDuckGoSearch, searxngSearch, tavilySearch, localSearch } from './search/index.js';
 import { SEARCH_TOOL, EXTRACT_TOOL, SCRAPE_TOOL, MAP_TOOL } from './tools.js';
-import type { SearchInput, MapInput, ScrapeInput } from './schemas.js';
-import FirecrawlApp from '@mendable/firecrawl-js';
+import type { SearchInput, MapInput, ScrapeInput, ExtractInput } from './schemas.js';
+import { AgentBrowser } from './libs/agent-browser/index.js';
 import dotenvx from '@dotenvx/dotenvx';
 import { SafeSearchType } from 'duck-duck-scrape';
 
-dotenvx.config();
+// Load environment variables silently (suppress all output)
+dotenvx.config({ quiet: true });
 
 // search api
 const SEARCH_API_URL = process.env.SEARCH_API_URL;
@@ -26,16 +27,6 @@ const FORMAT = process.env.FORMAT ?? 'json';
 const LANGUAGE = process.env.LANGUAGE ?? 'auto';
 const TIME_RANGE = process.env.TIME_RANGE ?? '';
 const DEFAULT_TIMEOUT = process.env.TIMEOUT ?? 10000;
-
-// firecrawl api
-const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
-const FIRECRAWL_API_URL = process.env.FIRECRAWL_API_URL;
-
-// firecrawl client
-const firecrawl = new FirecrawlApp({
-  apiKey: FIRECRAWL_API_KEY ?? '',
-  ...(FIRECRAWL_API_URL ? { apiUrl: FIRECRAWL_API_URL } : {}),
-});
 
 // Server implementation using MCP SDK v1.25+ pattern
 const server = new McpServer(
@@ -170,24 +161,19 @@ server.registerTool(
   }),
 );
 
-// Note: one_extract tool is defined but not implemented
 server.registerTool(
   EXTRACT_TOOL.name,
   {
     description: EXTRACT_TOOL.description,
     inputSchema: EXTRACT_TOOL.schema,
   },
-  async (_args) => {
+  createToolHandler(EXTRACT_TOOL.name, async (args: ExtractInput) => {
+    const { content } = await processExtract(args);
+
     return {
-      content: [
-        {
-          type: 'text' as const,
-          text: 'Extract tool is not yet implemented',
-        },
-      ],
-      isError: true,
+      content,
     };
-  },
+  }),
 );
 
 // Business logic functions
@@ -252,50 +238,53 @@ async function processScrape(url: string, args: Omit<ScrapeInput, 'url'>): Promi
   result: any;
   success: boolean;
 }> {
-  const res = await firecrawl.scrapeUrl(url, {
-    ...args,
-  } as any);
+  const browser = new AgentBrowser({
+    headless: true,
+    timeout: 30000,
+  });
 
-  if (!res.success) {
-    throw new Error(`Failed to scrape: ${res.error}`);
+  try {
+    const res = await browser.scrapeUrl(url, args);
+
+    if (!res.success) {
+      throw new Error(`Failed to scrape: ${res.error}`);
+    }
+
+    const content: string[] = [];
+
+    if (res.markdown) {
+      content.push(res.markdown);
+    }
+
+    if (res.rawHtml) {
+      content.push(res.rawHtml);
+    }
+
+    if (res.links) {
+      content.push(res.links.join('\n'));
+    }
+
+    if (res.screenshot) {
+      content.push(res.screenshot);
+    }
+
+    if (res.html) {
+      content.push(res.html);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: content.join('\n\n') || 'No content found',
+        },
+      ],
+      result: res,
+      success: true,
+    };
+  } finally {
+    await browser.close();
   }
-
-  const content: string[] = [];
-
-  if (res.markdown) {
-    content.push(res.markdown);
-  }
-
-  if (res.rawHtml) {
-    content.push(res.rawHtml);
-  }
-
-  if (res.links) {
-    content.push(res.links.join('\n'));
-  }
-
-  if (res.screenshot) {
-    content.push(res.screenshot);
-  }
-
-  if (res.html) {
-    content.push(res.html);
-  }
-
-  if (res.extract) {
-    content.push(res.extract);
-  }
-
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: content.join('\n\n') || 'No content found',
-      },
-    ],
-    result: res,
-    success: true,
-  };
 }
 
 async function processMapUrl(url: string, args: Omit<MapInput, 'url'>): Promise<{
@@ -303,37 +292,109 @@ async function processMapUrl(url: string, args: Omit<MapInput, 'url'>): Promise<
   result: string[];
   success: boolean;
 }> {
-  const res = await firecrawl.mapUrl(url, {
-    ...args,
-  } as any);
+  const browser = new AgentBrowser({
+    headless: true,
+    timeout: 30000,
+  });
 
-  if ('error' in res) {
-    throw new Error(`Failed to map: ${res.error}`);
+  try {
+    const res = await browser.mapUrl(url, args);
+
+    if (!res.success) {
+      throw new Error(`Failed to map: ${res.error}`);
+    }
+
+    if (!res.links) {
+      throw new Error(`No links found from: ${url}`);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: res.links.join('\n').trim(),
+        },
+      ],
+      result: res.links,
+      success: true,
+    };
+  } finally {
+    await browser.close();
   }
+}
 
-  if (!res.links) {
-    throw new Error(`No links found from: ${url}`);
+async function processExtract(args: ExtractInput): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+}> {
+  const { urls, prompt, systemPrompt, schema } = args;
+  const browser = new AgentBrowser({
+    headless: true,
+    timeout: 30000,
+  });
+
+  try {
+    const results: string[] = [];
+
+    // Extract content from each URL
+    for (const url of urls) {
+      try {
+        const res = await browser.scrapeUrl(url, {
+          formats: ['markdown'],
+          onlyMainContent: true,
+        });
+
+        if (res.success && res.markdown) {
+          results.push(`## Content from ${url}\n\n${res.markdown}`);
+        } else {
+          results.push(`## Failed to extract from ${url}\n\nError: ${res.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        results.push(`## Failed to extract from ${url}\n\nError: ${errorMsg}`);
+      }
+    }
+
+    let finalText = results.join('\n\n---\n\n');
+
+    // Add extraction instructions if provided
+    if (prompt || systemPrompt || schema) {
+      const instructions: string[] = [];
+
+      if (systemPrompt) {
+        instructions.push(`System Instructions: ${systemPrompt}`);
+      }
+
+      if (prompt) {
+        instructions.push(`Extraction Task: ${prompt}`);
+      }
+
+      if (schema) {
+        instructions.push(`Expected Schema:\n${JSON.stringify(schema, null, 2)}`);
+      }
+
+      finalText = `${instructions.join('\n\n')}\n\n---\n\nExtracted Content:\n\n${finalText}`;
+    }
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: finalText,
+        },
+      ],
+    };
+  } finally {
+    await browser.close();
   }
-
-  return {
-    content: [
-      {
-        type: 'text' as const,
-        text: res.links.join('\n').trim(),
-      },
-    ],
-    result: res.links,
-    success: true,
-  };
 }
 
 async function runServer(): Promise<void> {
   try {
-    process.stdout.write('Starting OneSearch MCP server...\n');
-
+    // Do NOT write to stdout before connecting - it will break MCP protocol
     const transport = new StdioServerTransport();
     await server.connect(transport);
 
+    // Now we can send logging messages through MCP protocol
     await server.sendLoggingMessage({
       level: 'info',
       data: 'OneSearch MCP server started',

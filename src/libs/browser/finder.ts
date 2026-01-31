@@ -121,6 +121,19 @@ export class BrowserFinder {
           linux: `${HOME_DIR}/.config/google-chrome-canary`,
         },
       },
+      {
+        name: 'Microsoft Edge',
+        executable: {
+          win32: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+          darwin: '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+          linux: '/usr/bin/microsoft-edge',
+        },
+        userDataDir: {
+          win32: `${LOCAL_APP_DATA}\\Microsoft\\Edge\\User Data`,
+          darwin: `${HOME_DIR}/Library/Application Support/Microsoft Edge`,
+          linux: `${HOME_DIR}/.config/microsoft-edge`,
+        },
+      },
     ];
   }
 
@@ -155,7 +168,7 @@ export class BrowserFinder {
       const error = name
         ? new Error(`Cannot find browser: ${name}`)
         : new Error(
-          'Cannot find a supported browser on your system. Please install Chrome, Edge, or Brave.',
+          'Cannot find a supported browser on your system. Please install Chrome, Chromium, Edge, or Brave.',
         );
       this.logger.error(error.message);
       throw error;

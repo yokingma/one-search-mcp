@@ -12,18 +12,22 @@ export class PinoLogger implements Logger {
   private logger: pino.Logger;
 
   constructor(name?: string) {
-    this.logger = pino({
-      name: name || 'one-search-mcp',
-      level: process.env.LOG_LEVEL || 'info',
-      transport: process.env.NODE_ENV === 'development' ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      } : undefined,
-    });
+    this.logger = pino(
+      {
+        name: name || 'one-search-mcp',
+        level: process.env.LOG_LEVEL || 'info',
+        transport: process.env.NODE_ENV === 'development' ? {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'SYS:standard',
+            ignore: 'pid,hostname',
+          },
+        } : undefined,
+      },
+      // CRITICAL: Write to stderr, not stdout (MCP protocol requirement)
+      process.stderr,
+    );
   }
 
   private logWithLevel(level: 'info' | 'error' | 'warn', message: string, ...args: any[]): void {
