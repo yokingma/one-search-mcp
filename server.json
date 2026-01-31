@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.yokingma/one-search-mcp",
+  "description": "One Search MCP Server, Web Search & Crawl & Scraper & Extract, support agent-browser, SearXNG, Tavily, DuckDuckGo, Bing, etc.",
+  "repository": {
+    "url": "https://github.com/yokingma/one-search-mcp",
+    "source": "github"
+  },
+  "version": "1.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "one-search-mcp",
+      "version": "1.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Search provider to use (searxng, tavily, bing, duckduckgo, local)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "SEARCH_PROVIDER"
+        },
+        {
+          "description": "API URL for SearXNG (required if using searxng provider)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false,
+          "name": "SEARCH_API_URL"
+        },
+        {
+          "description": "API key for search provider (required for tavily, bing)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "SEARCH_API_KEY"
+        }
+      ]
+    }
+  ]
+}

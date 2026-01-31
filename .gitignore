@@ -1,6 +1,8 @@
 # 依赖目录
 node_modules/
 package-lock.json
+pnpm-lock.yaml
+yarn.lock
 
 # 日志文件
 logs/
@@ -8,12 +10,14 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # ESLint
 .eslintcache
 
 # 运行时数据
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -37,4 +41,14 @@ coverage/
 
 # 临时文件
 tmp/
-temp/ 
+temp/
+
+# 测试输出
+*.test.js
+*.spec.js
+
+# 系统文件
+Thumbs.db
+
+# MCP Registry tokens (sensitive)
+.mcpregistry_* 

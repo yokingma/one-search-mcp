@@ -1,7 +1,7 @@
 {
   "name": "one-search-mcp",
-  "version": "1.0.11",
-  "description": "One Search MCP Server, Web Search & Crawl & Scraper & Extract, support Firecrawl, SearXNG, Tavily, DuckDuckGo, Bing, etc.",
+  "version": "1.1.0",
+  "description": "One Search MCP Server, Web Search & Crawl & Scraper & Extract, support agent-browser, SearXNG, Tavily, DuckDuckGo, Bing, etc.",
   "private": false,
   "type": "module",
   "keywords": [
@@ -9,13 +9,14 @@
     "LLM",
     "MCP",
     "ModelContextProtocol",
-    "Firecrawl MCP Server",
+    "agent-browser",
     "Search MCP Server",
     "SearXNG MCP Server",
     "DuckDuckGo MCP Server",
     "Bing MCP Server",
     "Tavily MCP Server",
     "Web Search",
+    "Web Scraper",
     "LLM Tool",
     "One Search"
   ],
