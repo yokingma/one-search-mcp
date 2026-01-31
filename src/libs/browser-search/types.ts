@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { BrowserInterface, LaunchOptions, Page } from '../browser/types.js';
-import { Logger } from '@agent-infra/logger';
+import { Logger } from '../logger/index.js';
 
 export type SearchResult = {
   title: string;

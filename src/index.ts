@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import  { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ISearchRequestOptions, ISearchResponse, SearchProvider } from './interface.js';
 import { bingSearch, duckDuckGoSearch, searxngSearch, tavilySearch, localSearch } from './search/index.js';
 import { SEARCH_TOOL, EXTRACT_TOOL, SCRAPE_TOOL, MAP_TOOL } from './tools.js';
-import FirecrawlApp, { MapParams, ScrapeParams } from '@mendable/firecrawl-js';
+import type { SearchInput, MapInput, ScrapeInput } from './schemas.js';
+import FirecrawlApp from '@mendable/firecrawl-js';
 import dotenvx from '@dotenvx/dotenvx';
 import { SafeSearchType } from 'duck-duck-scrape';
 
@@ -37,11 +37,11 @@ const firecrawl = new FirecrawlApp({
   ...(FIRECRAWL_API_URL ? { apiUrl: FIRECRAWL_API_URL } : {}),
 });
 
-// Server implementation
-const server = new Server(
+// Server implementation using MCP SDK v1.25+ pattern
+const server = new McpServer(
   {
     name: 'one-search-mcp',
-    version: '0.0.1',
+    version: '1.0.11',
   },
   {
     capabilities: {
@@ -62,181 +62,135 @@ const searchDefaultConfig = {
   timeout: DEFAULT_TIMEOUT,
 };
 
-// Tool handlers
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [
-    SEARCH_TOOL,
-    EXTRACT_TOOL,
-    SCRAPE_TOOL,
-    MAP_TOOL,
-  ],
-}));
+// Helper function to wrap tool handlers with logging and error handling
+function createToolHandler<TInput, TOutput>(
+  toolName: string,
+  handler: (args: TInput) => Promise<TOutput>,
+) {
+  return async (args: TInput) => {
+    const startTime = Date.now();
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const startTime = Date.now();
+    try {
+      await server.sendLoggingMessage({
+        level: 'info',
+        data: `[${new Date().toISOString()}] Request started for tool: [${toolName}]`,
+      });
 
-  try {
-    const { name, arguments: args } = request.params;
+      const result = await handler(args);
 
-    if (!args) {
-      throw new Error('No arguments provided');
+      await server.sendLoggingMessage({
+        level: 'info',
+        data: `[${new Date().toISOString()}] Request completed in ${Date.now() - startTime}ms`,
+      });
+
+      return result;
+    } catch (error) {
+      await server.sendLoggingMessage({
+        level: 'error',
+        data: `[${new Date().toISOString()}] Error in ${toolName}: ${error}`,
+      });
+      const msg = error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: msg,
+          },
+        ],
+        isError: true,
+      };
     }
-  
-    server.sendLoggingMessage({
-      level: 'info',
-      data: `[${new Date().toISOString()}] Received request for tool: [${name}]`,
+  };
+}
+
+// Register tools using the new registerTool API
+server.registerTool(
+  SEARCH_TOOL.name,
+  {
+    description: SEARCH_TOOL.description,
+    inputSchema: SEARCH_TOOL.schema,
+  },
+  createToolHandler(SEARCH_TOOL.name, async (args: SearchInput) => {
+    const { results, success } = await processSearch({
+      ...args,
+      apiKey: SEARCH_API_KEY ?? '',
+      apiUrl: SEARCH_API_URL,
     });
-  
-    switch (name) {
-      case 'one_search': {
-        // check args.
-        if (!checkSearchArgs(args)) {
-          throw new Error(`Invalid arguments for tool: [${name}]`);
-        }
-        try {
-          const { results, success } = await processSearch({
-            ...args,
-            apiKey: SEARCH_API_KEY ?? '',
-            apiUrl: SEARCH_API_URL,
-          });
-          if (!success) {
-            throw new Error('Failed to search');
-          }
-          const resultsText = results.map((result) => (
-            `Title: ${result.title}
+
+    if (!success) {
+      throw new Error('Failed to search');
+    }
+
+    const resultsText = results.map((result) => (
+      `Title: ${result.title}
 URL: ${result.url}
 Description: ${result.snippet}
 ${result.markdown ? `Content: ${result.markdown}` : ''}`
-          ));
-          return {
-            content: [
-              {
-                type: 'text',
-                text: resultsText.join('\n\n'),
-              },
-            ],
-            results,
-            success,
-          };
-        } catch (error) {
-          server.sendLoggingMessage({
-            level: 'error',
-            data: `[${new Date().toISOString()}] Error searching: ${error}`,
-          });
-          const msg = error instanceof Error ? error.message : 'Unknown error';
-          return {
-            success: false,
-            content: [
-              {
-                type: 'text',
-                text: msg,
-              },
-            ],
-          };
-        }
-      }
-      case 'one_scrape': {
-        if (!checkScrapeArgs(args)) {
-          throw new Error(`Invalid arguments for tool: [${name}]`);
-        }
-        try {
-          const startTime = Date.now();
-          server.sendLoggingMessage({
-            level: 'info',
-            data: `[${new Date().toISOString()}] Scraping started for url: [${args.url}]`,
-          });
+    ));
 
-          const { url, ...scrapeArgs } = args;
-          const { content, success, result } = await processScrape(url, scrapeArgs);
-
-          server.sendLoggingMessage({
-            level: 'info',
-            data: `[${new Date().toISOString()}] Scraping completed in ${Date.now() - startTime}ms`,
-          });
-
-          return {
-            content,
-            result,
-            success,
-          };
-        } catch (error) {
-          server.sendLoggingMessage({
-            level: 'error',
-            data: `[${new Date().toISOString()}] Error scraping: ${error}`,
-          });
-          const msg = error instanceof Error ? error.message : 'Unknown error';
-          return {
-            success: false,
-            content: [
-              {
-                type: 'text',
-                text: msg,
-              },
-            ],
-          };
-        }
-      }
-      case 'one_map': {
-        if (!checkMapArgs(args)) {
-          throw new Error(`Invalid arguments for tool: [${name}]`);
-        }
-        try {
-          const { content, success, result } = await processMapUrl(args.url, args);
-          return {
-            content,
-            result,
-            success,
-          };
-        } catch (error) {
-          server.sendLoggingMessage({
-            level: 'error',
-            data: `[${new Date().toISOString()}] Error mapping: ${error}`,
-          });
-          const msg = error instanceof Error ? error.message : String(error);
-          return {
-            success: false,
-            content: [
-              {
-                type: 'text',
-                text: msg,
-              },
-            ],
-          };
-        }
-      }
-      default: {
-        throw new Error(`Unknown tool: ${name}`);
-      }
-    }
-  } catch(error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    server.sendLoggingMessage({
-      level: 'error',
-      data: {
-        message: `[${new Date().toISOString()}] Error processing request: ${msg}`,
-        tool: request.params.name,
-        arguments: request.params.arguments,
-        timestamp: new Date().toISOString(),
-        duration: Date.now() - startTime,
-      },
-    });
     return {
-      success: false,
       content: [
         {
-          type: 'text',
-          text: msg,
+          type: 'text' as const,
+          text: resultsText.join('\n\n'),
         },
       ],
     };
-  } finally {
-    server.sendLoggingMessage({
-      level: 'info',
-      data: `[${new Date().toISOString()}] Request completed in ${Date.now() - startTime}ms`,
-    });
-  }
-});
+  }),
+);
 
+server.registerTool(
+  SCRAPE_TOOL.name,
+  {
+    description: SCRAPE_TOOL.description,
+    inputSchema: SCRAPE_TOOL.schema,
+  },
+  createToolHandler(SCRAPE_TOOL.name, async (args: ScrapeInput) => {
+    const { url, ...scrapeArgs } = args;
+    const { content } = await processScrape(url, scrapeArgs);
+
+    return {
+      content,
+    };
+  }),
+);
+
+server.registerTool(
+  MAP_TOOL.name,
+  {
+    description: MAP_TOOL.description,
+    inputSchema: MAP_TOOL.schema,
+  },
+  createToolHandler(MAP_TOOL.name, async (args: MapInput) => {
+    const { content } = await processMapUrl(args.url, args);
+
+    return {
+      content,
+    };
+  }),
+);
+
+// Note: one_extract tool is defined but not implemented
+server.registerTool(
+  EXTRACT_TOOL.name,
+  {
+    description: EXTRACT_TOOL.description,
+    inputSchema: EXTRACT_TOOL.schema,
+  },
+  async (_args) => {
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: 'Extract tool is not yet implemented',
+        },
+      ],
+      isError: true,
+    };
+  },
+);
+
+// Business logic functions
 async function processSearch(args: ISearchRequestOptions): Promise<ISearchResponse> {
   switch (SEARCH_PROVIDER) {
     case 'searxng': {
@@ -293,10 +247,14 @@ async function processSearch(args: ISearchRequestOptions): Promise<ISearchRespon
   }
 }
 
-async function processScrape(url: string, args: ScrapeParams) {
+async function processScrape(url: string, args: Omit<ScrapeInput, 'url'>): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+  result: any;
+  success: boolean;
+}> {
   const res = await firecrawl.scrapeUrl(url, {
     ...args,
-  });
+  } as any);
 
   if (!res.success) {
     throw new Error(`Failed to scrape: ${res.error}`);
@@ -331,7 +289,7 @@ async function processScrape(url: string, args: ScrapeParams) {
   return {
     content: [
       {
-        type: 'text',
+        type: 'text' as const,
         text: content.join('\n\n') || 'No content found',
       },
     ],
@@ -340,10 +298,14 @@ async function processScrape(url: string, args: ScrapeParams) {
   };
 }
 
-async function processMapUrl(url: string, args: MapParams) {
+async function processMapUrl(url: string, args: Omit<MapInput, 'url'>): Promise<{
+  content: Array<{ type: 'text'; text: string }>;
+  result: string[];
+  success: boolean;
+}> {
   const res = await firecrawl.mapUrl(url, {
     ...args,
-  });
+  } as any);
 
   if ('error' in res) {
     throw new Error(`Failed to map: ${res.error}`);
@@ -356,7 +318,7 @@ async function processMapUrl(url: string, args: MapParams) {
   return {
     content: [
       {
-        type: 'text',
+        type: 'text' as const,
         text: res.links.join('\n').trim(),
       },
     ],
@@ -365,41 +327,14 @@ async function processMapUrl(url: string, args: MapParams) {
   };
 }
 
-function checkSearchArgs(args: unknown): args is ISearchRequestOptions {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'query' in args &&
-    typeof args.query === 'string'
-  );
-}
-
-function checkScrapeArgs(args: unknown): args is ScrapeParams & { url: string } {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'url' in args &&
-    typeof args.url === 'string'
-  );
-}
-
-function checkMapArgs(args: unknown): args is MapParams & { url: string } {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'url' in args &&
-    typeof args.url === 'string'
-  );
-}
-
-async function runServer() {
+async function runServer(): Promise<void> {
   try {
     process.stdout.write('Starting OneSearch MCP server...\n');
 
     const transport = new StdioServerTransport();
     await server.connect(transport);
 
-    server.sendLoggingMessage({
+    await server.sendLoggingMessage({
       level: 'info',
       data: 'OneSearch MCP server started',
     });

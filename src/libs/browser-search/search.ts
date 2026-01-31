@@ -4,7 +4,7 @@
  */
 import { LocalBrowser, type BrowserInterface } from '../browser/index.js';
 import { READABILITY_SCRIPT } from './readability.js';
-import { Logger, defaultLogger } from '@agent-infra/logger';
+import { Logger, defaultLogger } from '../logger/index.js';
 import {
   extractPageInformation,
   toMarkdown,

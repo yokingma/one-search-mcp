@@ -3,7 +3,7 @@
  * https://github.com/egoist/local-web-search/blob/main/src/find-browser.ts
  * Copy from
  * https://github.com/bytedance/UI-TARS-desktop/blob/main/packages/agent-infra/browser/src/browser-finder.ts
- * 
+ *
  * MIT Licensed
  * Copyright (c) 2025 ChatWise (https://chatwise.app) <kevin@chatwise.app>
  * https://github.com/egoist/local-web-search/blob/main/LICENSE
@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { Logger, defaultLogger } from '@agent-infra/logger';
+import { Logger, defaultLogger } from '../logger/index.js';
 
 /**
  * Interface defining browser locations and configurations

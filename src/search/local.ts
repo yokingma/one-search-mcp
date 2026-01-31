@@ -1,8 +1,8 @@
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { BrowserSearch, LocalBrowserSearchEngine } from '../libs/browser-search/index.js';
-import { ConsoleLogger } from '@agent-infra/logger';
+import { PinoLogger } from '../libs/logger/index.js';
 
-const logger = new ConsoleLogger('[LocalSearch]');
+const logger = new PinoLogger('[LocalSearch]');
 
 export async function localSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
   const { query, limit = 10 } = options;

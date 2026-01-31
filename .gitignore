@@ -19,6 +19,10 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# 构建输出目录
+dist/
+build/
+
 # 编辑器目录和文件
 .idea/
 .vscode/

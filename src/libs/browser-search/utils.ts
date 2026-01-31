@@ -1,13 +1,13 @@
 /**
  * The following code is based on
  * https://github.com/bytedance/UI-TARS-desktop/tree/main/packages/agent-infra/search/browser-search
- * 
+ *
  * Copyright (c) 2025 Bytedance, Inc. and its affiliates.
  * SPDX-License-Identifier: Apache-2.0
  */
 import Turndown from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
-import { defaultLogger as logger } from '@agent-infra/logger';
+import { defaultLogger as logger } from '../logger/index.js';
 import { Page } from '../browser/index.js';
 import UserAgent from 'user-agents';
 
