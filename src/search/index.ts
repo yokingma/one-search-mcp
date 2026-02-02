@@ -3,3 +3,8 @@ export * from './duckduckgo.js';
 export * from './searxng.js';
 export * from './tavily.js';
 export * from './local.js';
+export * from './google.js';
+export * from './zhipu.js';
+export * from './exa.js';
+export * from './bocha.js';
+export * from './logger.js';

@@ -94,6 +94,7 @@
     "async-retry": "^1.3.3",
     "cheerio": "^1.2.0",
     "duck-duck-scrape": "^2.2.7",
+    "exa-js": "^2.3.0",
     "pino": "^10.3.0",
     "playwright-core": "^1.58.1",
     "turndown": "^7.2.0",

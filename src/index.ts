@@ -3,7 +3,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { ISearchRequestOptions, ISearchResponse, SearchProvider } from './interface.js';
-import { bingSearch, duckDuckGoSearch, searxngSearch, tavilySearch, localSearch } from './search/index.js';
+import { bingSearch, duckDuckGoSearch, searxngSearch, tavilySearch, localSearch, googleSearch, zhipuSearch, exaSearch, bochaSearch } from './search/index.js';
 import { SEARCH_TOOL, EXTRACT_TOOL, SCRAPE_TOOL, MAP_TOOL } from './tools.js';
 import type { SearchInput, MapInput, ScrapeInput, ExtractInput } from './schemas.js';
 import { AgentBrowser } from './libs/agent-browser/index.js';
@@ -226,6 +226,35 @@ async function processSearch(args: ISearchRequestOptions): Promise<ISearchRespon
       return await localSearch({
         ...searchDefaultConfig,
         ...args,
+      });
+    }
+    case 'google': {
+      return await googleSearch({
+        ...searchDefaultConfig,
+        ...args,
+        apiKey: SEARCH_API_KEY,
+        apiUrl: SEARCH_API_URL,
+      });
+    }
+    case 'zhipu': {
+      return await zhipuSearch({
+        ...searchDefaultConfig,
+        ...args,
+        apiKey: SEARCH_API_KEY,
+      });
+    }
+    case 'exa': {
+      return await exaSearch({
+        ...searchDefaultConfig,
+        ...args,
+        apiKey: SEARCH_API_KEY,
+      });
+    }
+    case 'bocha': {
+      return await bochaSearch({
+        ...searchDefaultConfig,
+        ...args,
+        apiKey: SEARCH_API_KEY,
       });
     }
     default:

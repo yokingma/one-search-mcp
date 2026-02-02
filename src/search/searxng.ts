@@ -1,34 +1,39 @@
 import url from 'node:url';
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
+import { searchLogger } from './logger.js';
 
 /**
  * SearxNG Search API
- * - https://docs.searxng.org/dev/search_api.html
+ * @reference https://docs.searxng.org/dev/search_api.html
  */
 export async function searxngSearch(params: ISearchRequestOptions): Promise<ISearchResponse> {
+  const {
+    query,
+    page = 1,
+    limit = 10,
+    categories = 'general',
+    engines = 'all',
+    safeSearch = 0,
+    format = 'json',
+    language = 'auto',
+    timeRange = '',
+    timeout = 10000,
+    apiKey,
+    apiUrl,
+  } = params;
+
+  if (!query?.trim()) {
+    throw new Error('Query cannot be empty');
+  }
+
+  if (!apiUrl) {
+    throw new Error('SearxNG API URL is required');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), Number(timeout));
+
   try {
-    const {
-      query,
-      page = 1,
-      limit = 10,
-      categories = 'general',
-      engines = 'all',
-      safeSearch = 0,
-      format = 'json',
-      language = 'auto',
-      timeRange = '',
-      timeout = 10000,
-      apiKey,
-      apiUrl,
-    } = params;
-
-    if (!apiUrl) {
-      throw new Error('SearxNG API URL is required');
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), Number(timeout));
-
     const config = {
       q: query,
       pageno: page,
@@ -91,8 +96,9 @@ export async function searxngSearch(params: ISearchRequestOptions): Promise<ISea
       success: false,
     };
   } catch (err: unknown) {
+    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Searxng search error.';
-    process.stdout.write(msg);
+    searchLogger.error(msg);
     throw err;
   }
 }

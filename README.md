@@ -1,11 +1,11 @@
 # 🚀 OneSearch MCP Server: Web Search & Crawl & Scraper & Extract
 
-A Model Context Protocol (MCP) server implementation that integrates with Searxng/Tavily/DuckDuckGo/Bing for web search, local browser search, and scraping capabilities with agent-browser.
+A Model Context Protocol (MCP) server implementation that integrates with multiple search providers for web search, local browser search, and scraping capabilities with agent-browser.
 
 ## Features
 
 - Web Search, scrape, crawl and extract content from websites.
-- Support multiple search engines and web scrapers: **SearXNG**, **Tavily**, **DuckDuckGo**, **Bing**, etc.
+- Support multiple search engines and web scrapers: **SearXNG**, **Tavily**, **DuckDuckGo**, **Bing**, **Google**, **Zhipu (智谱)**, **Exa**, **Bocha (博查)**, etc.
 - **Local web search** (browser search), support multiple search engines: **Bing**, **Google**, **Baidu**, **Sogou**, etc.
   - Use `agent-browser` for browser automation.
   - Free, no API keys required.
@@ -87,14 +87,28 @@ npx -y one-search-mcp
 
 **Search Engine:**
 
-- **SEARCH_PROVIDER** (Optional): The search provider to use, supports `searxng`, `duckduckgo`, `bing`, `tavily`, `local`, default is `local`.
-- **SEARCH_API_URL** (Optional): The URL of the SearxNG API, required for `searxng`.
-- **SEARCH_API_KEY** (Optional): The API key for the search provider, required for `tavily`, `bing`.
+- **SEARCH_PROVIDER** (Optional): The search provider to use, supports `searxng`, `duckduckgo`, `bing`, `tavily`, `google`, `zhipu`, `exa`, `bocha`, `local`, default is `local`.
+- **SEARCH_API_URL** (Optional): The URL of the SearxNG API, or Google Custom Search Engine ID for `google`.
+- **SEARCH_API_KEY** (Optional): The API key for the search provider, required for `tavily`, `bing`, `google`, `zhipu`, `exa`, `bocha`.
 
 ```ts
 // supported search providers
-export type SearchProvider = 'searxng' | 'duckduckgo' | 'bing' | 'tavily' | 'local';
+export type SearchProvider = 'searxng' | 'duckduckgo' | 'bing' | 'tavily' | 'google' | 'zhipu' | 'exa' | 'bocha' | 'local';
 ```
+
+### Search Provider Configuration
+
+| Provider | API Key Required | API URL Required | Notes |
+|----------|-----------------|------------------|-------|
+| `local` | No | No | Free, uses browser automation |
+| `duckduckgo` | No | No | Free, no API key needed |
+| `searxng` | Optional | Yes | Self-hosted meta search engine |
+| `bing` | Yes | No | [Bing Search API](https://learn.microsoft.com/en-us/previous-versions/bing/search-apis/bing-web-search/create-bing-search-service-resource) |
+| `tavily` | Yes | No | [Tavily API](https://tavily.com/) |
+| `google` | Yes | Yes (Search Engine ID) | [Google Custom Search](https://developers.google.com/custom-search/v1/overview) |
+| `zhipu` | Yes | No | [智谱 AI](https://bigmodel.cn/dev/api/search-tool/web-search) |
+| `exa` | Yes | No | [Exa AI](https://exa.ai/) |
+| `bocha` | Yes | No | [博查 AI](https://open.bochaai.com/) |
 
 ## Configuration for Other MCP Clients
 

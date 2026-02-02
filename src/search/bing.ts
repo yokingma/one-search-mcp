@@ -1,7 +1,11 @@
 /**
  * Bing Search API
+ * @reference https://learn.microsoft.com/en-us/previous-versions/bing/search-apis/bing-web-search/create-bing-search-service-resource
  */
 import { ISearchRequestOptions, ISearchResponse } from '../interface.js';
+import { searchLogger } from './logger.js';
+
+const DEFAULT_TIMEOUT = 20000;
 
 
 /**
@@ -210,11 +214,15 @@ export interface BingSearchResponse {
 export async function bingSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
   const { query, limit = 10, safeSearch = 0, page = 1, apiUrl = 'https://api.bing.microsoft.com/v7.0/search', apiKey, language } = options;
 
-  const bingSafeSearchOptions = ['Off', 'Moderate', 'Strict'];
+  if (!query?.trim()) {
+    throw new Error('Query cannot be empty');
+  }
 
   if (!apiKey) {
     throw new Error('Bing API key is required');
   }
+
+  const bingSafeSearchOptions = ['Off', 'Moderate', 'Strict'];
 
   const searchOptions = {
     q: query,
@@ -223,6 +231,9 @@ export async function bingSearch(options: ISearchRequestOptions): Promise<ISearc
     mkt: language,
     safeSearch: bingSafeSearchOptions[safeSearch] as 'Off' | 'Moderate' | 'Strict',
   };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
 
   try {
     const queryParams = new URLSearchParams();
@@ -238,7 +249,10 @@ export async function bingSearch(options: ISearchRequestOptions): Promise<ISearc
         'Content-Type': 'application/json',
         'Ocp-Apim-Subscription-Key': apiKey,
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       throw new Error(`Bing search error: ${res.status} ${res.statusText}`);
@@ -263,8 +277,9 @@ export async function bingSearch(options: ISearchRequestOptions): Promise<ISearc
       success: true,
     };
   } catch (err: unknown) {
+    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Bing search error.';
-    process.stdout.write(msg);
+    searchLogger.error(msg);
     throw err;
   }
 }

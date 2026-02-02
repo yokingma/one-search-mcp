@@ -40,5 +40,14 @@ export interface ISearchResponse {
   success: boolean;
 }
 
-export type SearchProvider = 'searxng' | 'duckduckgo' | 'bing' | 'tavily' | 'local';
+export type SearchProvider =
+  | 'searxng'
+  | 'duckduckgo'
+  | 'bing'
+  | 'tavily'
+  | 'local'
+  | 'google'
+  | 'zhipu'
+  | 'exa'
+  | 'bocha';
 export type SearchTimeRange = 'year' | 'month' | 'week' | 'day';

@@ -2,12 +2,16 @@ import * as DDG from 'duck-duck-scrape';
 import asyncRetry from 'async-retry';
 import type { SearchOptions } from 'duck-duck-scrape';
 import { ISearchRequestOptions, ISearchResponse } from '../interface.js';
-
+import { searchLogger } from './logger.js';
 
 export async function duckDuckGoSearch(options: Omit<ISearchRequestOptions, 'safeSearch'> & SearchOptions): Promise<ISearchResponse> {
+  const { query, timeout = 10000, safeSearch = DDG.SafeSearchType.OFF, retry = { retries: 3 }, ...searchOptions } = options;
+
+  if (!query?.trim()) {
+    throw new Error('Query cannot be empty');
+  }
+
   try {
-    const { query, timeout = 10000, safeSearch = DDG.SafeSearchType.OFF, retry = { retries: 3 }, ...searchOptions } = options;
-  
     const res = await asyncRetry(
       () => {
         return DDG.search(query, {
@@ -45,7 +49,7 @@ export async function duckDuckGoSearch(options: Omit<ISearchRequestOptions, 'saf
     };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'DuckDuckGo search error.';
-    process.stdout.write(msg);
+    searchLogger.error(msg);
     throw error;
   }
 }
