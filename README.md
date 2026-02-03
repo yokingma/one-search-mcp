@@ -83,6 +83,54 @@ npm install -g one-search-mcp
 npx -y one-search-mcp
 ```
 
+### Using Docker
+
+Docker image includes all dependencies (Chromium browser) pre-installed, no additional setup required.
+
+**Pull the image:**
+
+```bash
+# From GitHub Container Registry
+docker pull ghcr.io/yokingma/one-search-mcp:latest
+
+# Or from Docker Hub
+docker pull zacma/one-search-mcp:latest
+```
+
+**Configure with Claude Desktop:**
+
+```json
+{
+  "mcpServers": {
+    "one-search-mcp": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/yokingma/one-search-mcp:latest"],
+      "env": {
+        "SEARCH_PROVIDER": "local"
+      }
+    }
+  }
+}
+```
+
+**With custom search provider:**
+
+```json
+{
+  "mcpServers": {
+    "one-search-mcp": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "SEARCH_PROVIDER=tavily",
+        "-e", "SEARCH_API_KEY=your_api_key",
+        "ghcr.io/yokingma/one-search-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
 ## Environment Variables
 
 **Search Engine:**
