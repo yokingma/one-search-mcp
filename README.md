@@ -67,10 +67,10 @@ npx agent-browser install
 claude mcp add one-search-mcp -- npx -y one-search-mcp
 
 # Add with custom search provider (e.g., SearXNG)
-claude mcp add -e SEARCH_PROVIDER=searxng -e SEARCH_API_URL=http://127.0.0.1:8080 one-search-mcp -- npx -y one-search-mcp
+claude mcp add one-search-mcp -e SEARCH_PROVIDER=searxng -e SEARCH_API_URL=http://127.0.0.1:8080 -- npx -y one-search-mcp
 
 # Add with Tavily API
-claude mcp add -e SEARCH_PROVIDER=tavily -e SEARCH_API_KEY=your_api_key one-search-mcp -- npx -y one-search-mcp
+claude mcp add one-search-mcp -e SEARCH_PROVIDER=tavily -e SEARCH_API_KEY=your_api_key -- npx -y one-search-mcp
 ```
 
 ### Manual Installation
