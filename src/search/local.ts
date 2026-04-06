@@ -1,5 +1,6 @@
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { AgentBrowser, type SearchEngine, VALID_SEARCH_ENGINES } from '../libs/agent-browser/index.js';
+import { runBrowserTask } from '../libs/agent-browser/task.js';
 import { PinoLogger } from '../libs/logger/index.js';
 
 const logger = new PinoLogger('[LocalSearch]');
@@ -24,7 +25,7 @@ function toSearchResponseResult(result: { title: string; url: string; snippet: s
   };
 }
 
-export async function localSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+export async function localSearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const { query, limit = 10 } = options;
   let { engines = 'all' } = options;
 
@@ -55,42 +56,44 @@ export async function localSearch(options: ISearchRequestOptions): Promise<ISear
     timeout: 30000,
   });
 
-  try {
-    const results: ISearchResponseResult[] = [];
+  return await runBrowserTask({
+    browser,
+    signal,
+    task: async () => {
+      const results: ISearchResponseResult[] = [];
 
-    for (const engine of validEngines) {
-      try {
-        logger.info(`Searching with engine: ${engine}`);
-        const searchResults = await browser.search({
-          query,
-          engine,
-          limit,
-        });
+      for (const engine of validEngines) {
+        try {
+          logger.info(`Searching with engine: ${engine}`);
+          const searchResults = await browser.search({
+            query,
+            engine,
+            limit,
+          });
 
-        if (searchResults.length > 0) {
-          // Convert SearchResult to ISearchResponseResult
-          const converted = searchResults.map(r => toSearchResponseResult(r, engine));
-          results.push(...converted);
-          logger.info(`Found ${searchResults.length} results from ${engine}`);
-          break; // Use first successful engine
+          if (searchResults.length > 0) {
+            // Convert SearchResult to ISearchResponseResult
+            const converted = searchResults.map(r => toSearchResponseResult(r, engine));
+            results.push(...converted);
+            logger.info(`Found ${searchResults.length} results from ${engine}`);
+            break; // Use first successful engine
+          }
+        } catch (err) {
+          logger.error(`Failed to search with ${engine}:`, err);
+          // Continue to next engine
         }
-      } catch (err) {
-        logger.error(`Failed to search with ${engine}:`, err);
-        // Continue to next engine
       }
-    }
 
-    logger.info(`Total results found: ${results.length}`);
+      logger.info(`Total results found: ${results.length}`);
 
-    return {
-      results,
-      success: true,
-    };
-  } catch (err: unknown) {
+      return {
+        results,
+        success: true,
+      };
+    },
+  }).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : 'Local search error.';
     logger.error(msg, err);
     throw err;
-  } finally {
-    await browser.close();
-  }
+  });
 }

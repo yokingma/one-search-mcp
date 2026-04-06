@@ -3,13 +3,23 @@
  * @reference https://docs.exa.ai/reference/search
  */
 
-import { Exa } from 'exa-js';
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
+const EXA_SEARCH_ENDPOINT = 'https://api.exa.ai/search';
 const DEFAULT_TIMEOUT = 20000;
+const DEFAULT_TEXT_CHARACTERS = 10000;
 
-export async function exaSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+interface ExaSearchResponse {
+  results: Array<{
+    title: string | null;
+    url: string;
+    text?: string;
+  }>;
+}
+
+export async function exaSearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const { query, apiKey, limit = 10 } = options;
 
   if (!query?.trim()) {
@@ -20,24 +30,36 @@ export async function exaSearch(options: ISearchRequestOptions): Promise<ISearch
     throw new Error('Exa search requires SEARCH_API_KEY');
   }
 
-  let timeoutId: NodeJS.Timeout | undefined;
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: DEFAULT_TIMEOUT,
+    timeoutMessage: 'Exa search timeout',
+  });
 
   try {
-    const exa = new Exa(apiKey);
-
-    const result = await Promise.race([
-      exa.search(query, {
+    const response = await fetch(EXA_SEARCH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        query,
         numResults: limit,
         contents: {
-          text: true,
+          text: {
+            maxCharacters: DEFAULT_TEXT_CHARACTERS,
+          },
         },
       }),
-      new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Exa search timeout')), DEFAULT_TIMEOUT);
-      }),
-    ]);
+      signal: requestSignal.signal,
+    });
 
-    clearTimeout(timeoutId);
+    if (!response.ok) {
+      throw new Error(`Exa search failed: ${response.status} ${response.statusText}`);
+    }
+
+    const result: ExaSearchResponse = await response.json();
 
     const results: ISearchResponseResult[] = result.results.map((item) => ({
       title: item.title || '',
@@ -48,9 +70,10 @@ export async function exaSearch(options: ISearchRequestOptions): Promise<ISearch
 
     return { results, success: true };
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Exa search error.';
     searchLogger.error(msg);
     throw err;
+  } finally {
+    requestSignal.cleanup();
   }
 }

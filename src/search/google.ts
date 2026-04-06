@@ -5,6 +5,7 @@
 
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
 const GOOGLE_SEARCH_ENDPOINT = 'https://www.googleapis.com/customsearch/v1';
 const DEFAULT_TIMEOUT = 20000;
@@ -27,7 +28,7 @@ interface GoogleSearchResponse {
   };
 }
 
-export async function googleSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+export async function googleSearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const { query, apiKey, apiUrl, limit = 10, language } = options;
 
   if (!query?.trim()) {
@@ -49,16 +50,17 @@ export async function googleSearch(options: ISearchRequestOptions): Promise<ISea
     params.set('lr', `lang_${language}`);
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: DEFAULT_TIMEOUT,
+    timeoutMessage: 'Google search timeout',
+  });
 
   try {
     const response = await fetch(`${GOOGLE_SEARCH_ENDPOINT}?${params}`, {
       method: 'GET',
-      signal: controller.signal,
+      signal: requestSignal.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Google search failed: ${response.status} ${response.statusText}`);
@@ -82,9 +84,10 @@ export async function googleSearch(options: ISearchRequestOptions): Promise<ISea
 
     return { results, success: true };
   } catch (error) {
-    clearTimeout(timeoutId);
     const msg = error instanceof Error ? error.message : 'Google search error.';
     searchLogger.error(msg);
     throw error;
+  } finally {
+    requestSignal.cleanup();
   }
 }

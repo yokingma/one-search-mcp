@@ -2,13 +2,17 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { ISearchRequestOptions, ISearchResponse, SearchProvider } from './interface.js';
-import { bingSearch, duckDuckGoSearch, searxngSearch, tavilySearch, localSearch, googleSearch, zhipuSearch, exaSearch, bochaSearch } from './search/index.js';
+import { SearchProvider } from './interface.js';
 import { SEARCH_TOOL, EXTRACT_TOOL, SCRAPE_TOOL, MAP_TOOL } from './tools.js';
 import type { SearchInput, MapInput, ScrapeInput, ExtractInput } from './schemas.js';
 import { AgentBrowser } from './libs/agent-browser/index.js';
+import { activeBrowserRegistry } from './libs/agent-browser/registry.js';
+import { runBrowserTask } from './libs/agent-browser/task.js';
+import { processSearch } from './search/process-search.js';
+import { createToolHandler } from './server/tool-handler.js';
+import { installProcessCleanupHandlers } from './server/process-cleanup.js';
+import { installStdioDisconnectCleanupHandlers } from './server/stdio-cleanup.js';
 import dotenvx from '@dotenvx/dotenvx';
-import { SafeSearchType } from 'duck-duck-scrape';
 
 // Load environment variables silently (suppress all output)
 dotenvx.config({ quiet: true });
@@ -32,7 +36,7 @@ const DEFAULT_TIMEOUT = process.env.TIMEOUT ?? 10000;
 const server = new McpServer(
   {
     name: 'one-search-mcp',
-    version: '1.1.2',
+    version: '1.1.3',
   },
   {
     capabilities: {
@@ -46,53 +50,27 @@ const searchDefaultConfig = {
   limit: Number(LIMIT),
   categories: CATEGORIES,
   format: FORMAT,
-  safesearch: SAFE_SEARCH,
+  safeSearch: Number(SAFE_SEARCH) as 0 | 1 | 2,
   language: LANGUAGE,
   engines: ENGINES,
-  time_range: TIME_RANGE,
+  timeRange: TIME_RANGE,
   timeout: DEFAULT_TIMEOUT,
 };
 
-// Helper function to wrap tool handlers with logging and error handling
-function createToolHandler<TInput, TOutput>(
-  toolName: string,
-  handler: (args: TInput) => Promise<TOutput>,
-) {
-  return async (args: TInput) => {
-    const startTime = Date.now();
+installProcessCleanupHandlers(process, async () => {
+  await activeBrowserRegistry.cleanup();
+});
 
-    try {
-      await server.sendLoggingMessage({
-        level: 'info',
-        data: `[${new Date().toISOString()}] Request started for tool: [${toolName}]`,
-      });
-
-      const result = await handler(args);
-
-      await server.sendLoggingMessage({
-        level: 'info',
-        data: `[${new Date().toISOString()}] Request completed in ${Date.now() - startTime}ms`,
-      });
-
-      return result;
-    } catch (error) {
-      await server.sendLoggingMessage({
-        level: 'error',
-        data: `[${new Date().toISOString()}] Error in ${toolName}: ${error}`,
-      });
-      const msg = error instanceof Error ? error.message : String(error);
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: msg,
-          },
-        ],
-        isError: true,
-      };
-    }
-  };
-}
+installStdioDisconnectCleanupHandlers(
+  process.stdin,
+  async () => {
+    await activeBrowserRegistry.cleanup();
+    await server.close();
+  },
+  (code) => {
+    process.exit(code);
+  },
+);
 
 // Register tools using the new registerTool API
 server.registerTool(
@@ -101,12 +79,17 @@ server.registerTool(
     description: SEARCH_TOOL.description,
     inputSchema: SEARCH_TOOL.schema,
   },
-  createToolHandler(SEARCH_TOOL.name, async (args: SearchInput) => {
-    const { results, success } = await processSearch({
-      ...args,
-      apiKey: SEARCH_API_KEY ?? '',
-      apiUrl: SEARCH_API_URL,
-    });
+  createToolHandler(SEARCH_TOOL.name, async (args: SearchInput, context) => {
+    const { results, success } = await processSearch(
+      args,
+      {
+        provider: SEARCH_PROVIDER,
+        apiKey: SEARCH_API_KEY ?? '',
+        apiUrl: SEARCH_API_URL,
+        defaultSearchOptions: searchDefaultConfig,
+      },
+      context.signal,
+    );
 
     if (!success) {
       throw new Error('Failed to search');
@@ -127,7 +110,7 @@ ${result.markdown ? `Content: ${result.markdown}` : ''}`
         },
       ],
     };
-  }),
+  }, { logMessage: (message) => server.sendLoggingMessage(message) }),
 );
 
 server.registerTool(
@@ -136,14 +119,14 @@ server.registerTool(
     description: SCRAPE_TOOL.description,
     inputSchema: SCRAPE_TOOL.schema,
   },
-  createToolHandler(SCRAPE_TOOL.name, async (args: ScrapeInput) => {
+  createToolHandler(SCRAPE_TOOL.name, async (args: ScrapeInput, context) => {
     const { url, ...scrapeArgs } = args;
-    const { content } = await processScrape(url, scrapeArgs);
+    const { content } = await processScrape(url, scrapeArgs, context.signal);
 
     return {
       content,
     };
-  }),
+  }, { logMessage: (message) => server.sendLoggingMessage(message) }),
 );
 
 server.registerTool(
@@ -152,13 +135,13 @@ server.registerTool(
     description: MAP_TOOL.description,
     inputSchema: MAP_TOOL.schema,
   },
-  createToolHandler(MAP_TOOL.name, async (args: MapInput) => {
-    const { content } = await processMapUrl(args.url, args);
+  createToolHandler(MAP_TOOL.name, async (args: MapInput, context) => {
+    const { content } = await processMapUrl(args.url, args, context.signal);
 
     return {
       content,
     };
-  }),
+  }, { logMessage: (message) => server.sendLoggingMessage(message) }),
 );
 
 server.registerTool(
@@ -167,104 +150,18 @@ server.registerTool(
     description: EXTRACT_TOOL.description,
     inputSchema: EXTRACT_TOOL.schema,
   },
-  createToolHandler(EXTRACT_TOOL.name, async (args: ExtractInput) => {
-    const { content } = await processExtract(args);
+  createToolHandler(EXTRACT_TOOL.name, async (args: ExtractInput, context) => {
+    const { content } = await processExtract(args, context.signal);
 
     return {
       content,
     };
-  }),
+  }, { logMessage: (message) => server.sendLoggingMessage(message) }),
 );
 
-// Business logic functions
-async function processSearch(args: ISearchRequestOptions): Promise<ISearchResponse> {
-  switch (SEARCH_PROVIDER) {
-    case 'searxng': {
-      // merge default config with args
-      const params = {
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-      };
-
-      // but categories and language have higher priority (ENV > args).
-      const { categories, language } = searchDefaultConfig;
-
-      if (categories) {
-        params.categories = categories;
-      }
-      if (language) {
-        params.language = language;
-      }
-      return await searxngSearch(params);
-    }
-    case 'tavily': {
-      return await tavilySearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-      });
-    }
-    case 'bing': {
-      return await bingSearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-      });
-    }
-    case 'duckduckgo': {
-      const safeSearch = args.safeSearch ?? 0;
-      const safeSearchOptions = [SafeSearchType.STRICT, SafeSearchType.MODERATE, SafeSearchType.OFF];
-      return await duckDuckGoSearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-        safeSearch: safeSearchOptions[safeSearch],
-      });
-    }
-    case 'local': {
-      return await localSearch({
-        ...searchDefaultConfig,
-        ...args,
-      });
-    }
-    case 'google': {
-      return await googleSearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-        apiUrl: SEARCH_API_URL,
-      });
-    }
-    case 'zhipu': {
-      return await zhipuSearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-      });
-    }
-    case 'exa': {
-      return await exaSearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-      });
-    }
-    case 'bocha': {
-      return await bochaSearch({
-        ...searchDefaultConfig,
-        ...args,
-        apiKey: SEARCH_API_KEY,
-      });
-    }
-    default:
-      throw new Error(`Unsupported search provider: ${SEARCH_PROVIDER}`);
-  }
-}
-
-async function processScrape(url: string, args: Omit<ScrapeInput, 'url'>): Promise<{
+async function processScrape(url: string, args: Omit<ScrapeInput, 'url'>, signal?: AbortSignal): Promise<{
   content: Array<{ type: 'text'; text: string }>;
-  result: any;
+  result: unknown;
   success: boolean;
 }> {
   const browser = new AgentBrowser({
@@ -272,51 +169,53 @@ async function processScrape(url: string, args: Omit<ScrapeInput, 'url'>): Promi
     timeout: 30000,
   });
 
-  try {
-    const res = await browser.scrapeUrl(url, args);
+  return await runBrowserTask({
+    browser,
+    signal,
+    task: async () => {
+      const res = await browser.scrapeUrl(url, args);
 
-    if (!res.success) {
-      throw new Error(`Failed to scrape: ${res.error}`);
-    }
+      if (!res.success) {
+        throw new Error(`Failed to scrape: ${res.error}`);
+      }
 
-    const content: string[] = [];
+      const content: string[] = [];
 
-    if (res.markdown) {
-      content.push(res.markdown);
-    }
+      if (res.markdown) {
+        content.push(res.markdown);
+      }
 
-    if (res.rawHtml) {
-      content.push(res.rawHtml);
-    }
+      if (res.rawHtml) {
+        content.push(res.rawHtml);
+      }
 
-    if (res.links) {
-      content.push(res.links.join('\n'));
-    }
+      if (res.links) {
+        content.push(res.links.join('\n'));
+      }
 
-    if (res.screenshot) {
-      content.push(res.screenshot);
-    }
+      if (res.screenshot) {
+        content.push(res.screenshot);
+      }
 
-    if (res.html) {
-      content.push(res.html);
-    }
+      if (res.html) {
+        content.push(res.html);
+      }
 
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: content.join('\n\n') || 'No content found',
-        },
-      ],
-      result: res,
-      success: true,
-    };
-  } finally {
-    await browser.close();
-  }
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: content.join('\n\n') || 'No content found',
+          },
+        ],
+        result: res,
+        success: true,
+      };
+    },
+  });
 }
 
-async function processMapUrl(url: string, args: Omit<MapInput, 'url'>): Promise<{
+async function processMapUrl(url: string, args: Omit<MapInput, 'url'>, signal?: AbortSignal): Promise<{
   content: Array<{ type: 'text'; text: string }>;
   result: string[];
   success: boolean;
@@ -326,33 +225,35 @@ async function processMapUrl(url: string, args: Omit<MapInput, 'url'>): Promise<
     timeout: 30000,
   });
 
-  try {
-    const res = await browser.mapUrl(url, args);
+  return await runBrowserTask({
+    browser,
+    signal,
+    task: async () => {
+      const res = await browser.mapUrl(url, args);
 
-    if (!res.success) {
-      throw new Error(`Failed to map: ${res.error}`);
-    }
+      if (!res.success) {
+        throw new Error(`Failed to map: ${res.error}`);
+      }
 
-    if (!res.links) {
-      throw new Error(`No links found from: ${url}`);
-    }
+      if (!res.links) {
+        throw new Error(`No links found from: ${url}`);
+      }
 
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: res.links.join('\n').trim(),
-        },
-      ],
-      result: res.links,
-      success: true,
-    };
-  } finally {
-    await browser.close();
-  }
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: res.links.join('\n').trim(),
+          },
+        ],
+        result: res.links,
+        success: true,
+      };
+    },
+  });
 }
 
-async function processExtract(args: ExtractInput): Promise<{
+async function processExtract(args: ExtractInput, signal?: AbortSignal): Promise<{
   content: Array<{ type: 'text'; text: string }>;
 }> {
   const { urls, prompt, systemPrompt, schema } = args;
@@ -361,60 +262,62 @@ async function processExtract(args: ExtractInput): Promise<{
     timeout: 30000,
   });
 
-  try {
-    const results: string[] = [];
+  return await runBrowserTask({
+    browser,
+    signal,
+    task: async () => {
+      const results: string[] = [];
 
-    // Extract content from each URL
-    for (const url of urls) {
-      try {
-        const res = await browser.scrapeUrl(url, {
-          formats: ['markdown'],
-          onlyMainContent: true,
-        });
+      // Extract content from each URL
+      for (const url of urls) {
+        try {
+          const res = await browser.scrapeUrl(url, {
+            formats: ['markdown'],
+            onlyMainContent: true,
+          });
 
-        if (res.success && res.markdown) {
-          results.push(`## Content from ${url}\n\n${res.markdown}`);
-        } else {
-          results.push(`## Failed to extract from ${url}\n\nError: ${res.error || 'Unknown error'}`);
+          if (res.success && res.markdown) {
+            results.push(`## Content from ${url}\n\n${res.markdown}`);
+          } else {
+            results.push(`## Failed to extract from ${url}\n\nError: ${res.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          results.push(`## Failed to extract from ${url}\n\nError: ${errorMsg}`);
         }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        results.push(`## Failed to extract from ${url}\n\nError: ${errorMsg}`);
-      }
-    }
-
-    let finalText = results.join('\n\n---\n\n');
-
-    // Add extraction instructions if provided
-    if (prompt || systemPrompt || schema) {
-      const instructions: string[] = [];
-
-      if (systemPrompt) {
-        instructions.push(`System Instructions: ${systemPrompt}`);
       }
 
-      if (prompt) {
-        instructions.push(`Extraction Task: ${prompt}`);
+      let finalText = results.join('\n\n---\n\n');
+
+      // Add extraction instructions if provided
+      if (prompt || systemPrompt || schema) {
+        const instructions: string[] = [];
+
+        if (systemPrompt) {
+          instructions.push(`System Instructions: ${systemPrompt}`);
+        }
+
+        if (prompt) {
+          instructions.push(`Extraction Task: ${prompt}`);
+        }
+
+        if (schema) {
+          instructions.push(`Expected Schema:\n${JSON.stringify(schema, null, 2)}`);
+        }
+
+        finalText = `${instructions.join('\n\n')}\n\n---\n\nExtracted Content:\n\n${finalText}`;
       }
 
-      if (schema) {
-        instructions.push(`Expected Schema:\n${JSON.stringify(schema, null, 2)}`);
-      }
-
-      finalText = `${instructions.join('\n\n')}\n\n---\n\nExtracted Content:\n\n${finalText}`;
-    }
-
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: finalText,
-        },
-      ],
-    };
-  } finally {
-    await browser.close();
-  }
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: finalText,
+          },
+        ],
+      };
+    },
+  });
 }
 
 async function runServer(): Promise<void> {

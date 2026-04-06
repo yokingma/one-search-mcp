@@ -1,12 +1,13 @@
 import url from 'node:url';
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
 /**
  * SearxNG Search API
  * @reference https://docs.searxng.org/dev/search_api.html
  */
-export async function searxngSearch(params: ISearchRequestOptions): Promise<ISearchResponse> {
+export async function searxngSearch(params: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const {
     query,
     page = 1,
@@ -30,8 +31,11 @@ export async function searxngSearch(params: ISearchRequestOptions): Promise<ISea
     throw new Error('SearxNG API URL is required');
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), Number(timeout));
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: Number(timeout),
+    timeoutMessage: 'Searxng search timeout',
+  });
 
   try {
     const config = {
@@ -60,10 +64,8 @@ export async function searxngSearch(params: ISearchRequestOptions): Promise<ISea
     const res = await fetch(`${endpoint}${queryParams}`, {
       method: 'POST',
       headers,
-      signal: controller.signal,
+      signal: requestSignal.signal,
     });
-
-    clearTimeout(timeoutId);
     const response = await res.json();
     if (response.results) {
       const list = (response.results as Array<Record<string, any>>).slice(0, limit);
@@ -96,9 +98,10 @@ export async function searxngSearch(params: ISearchRequestOptions): Promise<ISea
       success: false,
     };
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Searxng search error.';
     searchLogger.error(msg);
     throw err;
+  } finally {
+    requestSignal.cleanup();
   }
 }

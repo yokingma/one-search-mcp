@@ -5,6 +5,7 @@
 
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
 const BOCHA_SEARCH_ENDPOINT = 'https://api.bocha.cn/v1/web-search';
 const DEFAULT_TIMEOUT = 20000;
@@ -39,7 +40,7 @@ interface BochaSearchResponse {
   results?: BochaSearchItem[];
 }
 
-export async function bochaSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+export async function bochaSearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const { query, apiKey, limit = 10, timeRange } = options;
 
   if (!query?.trim()) {
@@ -61,8 +62,11 @@ export async function bochaSearch(options: ISearchRequestOptions): Promise<ISear
     freshness = freshnessMap[timeRange] || 'noLimit';
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: DEFAULT_TIMEOUT,
+    timeoutMessage: 'Bocha search timeout',
+  });
 
   try {
     const response = await fetch(BOCHA_SEARCH_ENDPOINT, {
@@ -77,10 +81,8 @@ export async function bochaSearch(options: ISearchRequestOptions): Promise<ISear
         summary: true,
         freshness,
       }),
-      signal: controller.signal,
+      signal: requestSignal.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Bocha search failed: ${response.status} ${response.statusText}`);
@@ -101,9 +103,10 @@ export async function bochaSearch(options: ISearchRequestOptions): Promise<ISear
 
     return { results, success: true };
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Bocha search error.';
     searchLogger.error(msg);
     throw err;
+  } finally {
+    requestSignal.cleanup();
   }
 }

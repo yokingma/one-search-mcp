@@ -85,7 +85,7 @@ Environment variables control behavior:
 ### Build System
 
 - **TypeScript**: Strict mode enabled with NodeNext module resolution
-- **tsup**: Bundles to both CJS and ESM formats with sourcemaps and minification
+- **tsup**: Bundles to both CJS and ESM formats without sourcemaps and with minification
 - **Module Type**: ESM (type: "module" in package.json)
 - **File Extensions**: All imports use `.js` extensions (TypeScript convention for ESM)
 

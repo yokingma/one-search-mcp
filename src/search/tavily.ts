@@ -2,13 +2,22 @@
  * Tavily Search API
  * @reference https://docs.tavily.com/documentation/quickstart
  */
-import { tavily, TavilySearchOptions } from '@tavily/core';
 import { ISearchRequestOptions, ISearchResponse } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
+const TAVILY_SEARCH_ENDPOINT = 'https://api.tavily.com/search';
 const DEFAULT_TIMEOUT = 20000;
 
-export async function tavilySearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+interface TavilySearchResponse {
+  results: Array<{
+    title: string;
+    url: string;
+    content: string;
+  }>;
+}
+
+export async function tavilySearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const {
     query,
     limit = 10,
@@ -25,27 +34,33 @@ export async function tavilySearch(options: ISearchRequestOptions): Promise<ISea
     throw new Error('Tavily API key is required');
   }
 
-  let timeoutId: NodeJS.Timeout | undefined;
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: DEFAULT_TIMEOUT,
+    timeoutMessage: 'Tavily search timeout',
+  });
 
   try {
-    const tvly = tavily({
-      apiKey,
+    const response = await fetch(TAVILY_SEARCH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        query,
+        topic: categories,
+        time_range: timeRange,
+        max_results: limit,
+      }),
+      signal: requestSignal.signal,
     });
 
-    const params: TavilySearchOptions = {
-      topic: categories as TavilySearchOptions['topic'],
-      timeRange: timeRange as TavilySearchOptions['timeRange'],
-      maxResults: limit,
-    };
+    if (!response.ok) {
+      throw new Error(`Tavily search failed: ${response.status} ${response.statusText}`);
+    }
 
-    const res = await Promise.race([
-      tvly.search(query, params),
-      new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Tavily search timeout')), DEFAULT_TIMEOUT);
-      }),
-    ]);
-
-    clearTimeout(timeoutId);
+    const res: TavilySearchResponse = await response.json();
 
     const results = res.results.map(item => ({
       title: item.title,
@@ -59,9 +74,10 @@ export async function tavilySearch(options: ISearchRequestOptions): Promise<ISea
       success: true,
     };
   } catch (error) {
-    clearTimeout(timeoutId);
     const msg = error instanceof Error ? error.message : 'Tavily search error.';
     searchLogger.error(msg);
     throw error;
+  } finally {
+    requestSignal.cleanup();
   }
 }

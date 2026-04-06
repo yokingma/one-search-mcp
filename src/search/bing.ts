@@ -4,6 +4,7 @@
  */
 import { ISearchRequestOptions, ISearchResponse } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
 const DEFAULT_TIMEOUT = 20000;
 
@@ -211,7 +212,7 @@ export interface BingSearchResponse {
   [key: string]: any; // Allow other response fields
 }
 
-export async function bingSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+export async function bingSearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const { query, limit = 10, safeSearch = 0, page = 1, apiUrl = 'https://api.bing.microsoft.com/v7.0/search', apiKey, language } = options;
 
   if (!query?.trim()) {
@@ -232,8 +233,11 @@ export async function bingSearch(options: ISearchRequestOptions): Promise<ISearc
     safeSearch: bingSafeSearchOptions[safeSearch] as 'Off' | 'Moderate' | 'Strict',
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: DEFAULT_TIMEOUT,
+    timeoutMessage: 'Bing search timeout',
+  });
 
   try {
     const queryParams = new URLSearchParams();
@@ -249,10 +253,8 @@ export async function bingSearch(options: ISearchRequestOptions): Promise<ISearc
         'Content-Type': 'application/json',
         'Ocp-Apim-Subscription-Key': apiKey,
       },
-      signal: controller.signal,
+      signal: requestSignal.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!res.ok) {
       throw new Error(`Bing search error: ${res.status} ${res.statusText}`);
@@ -277,9 +279,10 @@ export async function bingSearch(options: ISearchRequestOptions): Promise<ISearc
       success: true,
     };
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Bing search error.';
     searchLogger.error(msg);
     throw err;
+  } finally {
+    requestSignal.cleanup();
   }
 }

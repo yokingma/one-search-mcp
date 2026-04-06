@@ -4,7 +4,10 @@ import type { SearchOptions } from 'duck-duck-scrape';
 import { ISearchRequestOptions, ISearchResponse } from '../interface.js';
 import { searchLogger } from './logger.js';
 
-export async function duckDuckGoSearch(options: Omit<ISearchRequestOptions, 'safeSearch'> & SearchOptions): Promise<ISearchResponse> {
+export async function duckDuckGoSearch(
+  options: ISearchRequestOptions & SearchOptions,
+  signal?: AbortSignal,
+): Promise<ISearchResponse> {
   const { query, timeout = 10000, safeSearch = DDG.SafeSearchType.OFF, retry = { retries: 3 }, ...searchOptions } = options;
 
   if (!query?.trim()) {
@@ -13,14 +16,22 @@ export async function duckDuckGoSearch(options: Omit<ISearchRequestOptions, 'saf
 
   try {
     const res = await asyncRetry(
-      () => {
-        return DDG.search(query, {
-          ...searchOptions,
-          safeSearch,
-        }, {
-          // needle options
-          response_timeout: timeout,
-        });
+      async (bail) => {
+        try {
+          return await DDG.search(query, {
+            ...searchOptions,
+            safeSearch,
+          }, {
+            response_timeout: timeout,
+            signal,
+          });
+        } catch (error) {
+          if (signal?.aborted) {
+            bail(signal.reason ?? error);
+          }
+
+          throw error;
+        }
       },
       retry,
     );

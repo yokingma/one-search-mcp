@@ -5,6 +5,7 @@
 
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { searchLogger } from './logger.js';
+import { createRequestSignal } from './request-signal.js';
 
 const ZHIPU_SEARCH_ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4/web_search';
 const DEFAULT_TIMEOUT = 20000;
@@ -32,7 +33,7 @@ interface ZhipuSearchResponse {
   search_intent?: Record<string, unknown>;
 }
 
-export async function zhipuSearch(options: ISearchRequestOptions): Promise<ISearchResponse> {
+export async function zhipuSearch(options: ISearchRequestOptions, signal?: AbortSignal): Promise<ISearchResponse> {
   const { query, apiKey, limit = 10, engines } = options;
 
   if (!query?.trim()) {
@@ -55,8 +56,11 @@ export async function zhipuSearch(options: ISearchRequestOptions): Promise<ISear
     ? (engines as ZhipuSearchEngine)
     : 'search_std';
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
+  const requestSignal = createRequestSignal({
+    signal,
+    timeoutMs: DEFAULT_TIMEOUT,
+    timeoutMessage: 'Zhipu search timeout',
+  });
 
   try {
     const response = await fetch(ZHIPU_SEARCH_ENDPOINT, {
@@ -71,10 +75,8 @@ export async function zhipuSearch(options: ISearchRequestOptions): Promise<ISear
         search_intent: false,
         count: limit,
       }),
-      signal: controller.signal,
+      signal: requestSignal.signal,
     });
-
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Zhipu search failed: ${response.status} ${response.statusText}`);
@@ -93,9 +95,10 @@ export async function zhipuSearch(options: ISearchRequestOptions): Promise<ISear
 
     return { results, success: true };
   } catch (err: unknown) {
-    clearTimeout(timeoutId);
     const msg = err instanceof Error ? err.message : 'Zhipu search error.';
     searchLogger.error(msg);
     throw err;
+  } finally {
+    requestSignal.cleanup();
   }
 }
