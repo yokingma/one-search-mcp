@@ -2,8 +2,13 @@
 
 ## 2026-04-08
 
+- Bumped the project version uniformly to `1.2.0` across npm/package metadata and MCP runtime metadata.
 - Simplified Docker release tags so GitHub tag builds now publish only the exact semver tag and `latest`.
 - Documented the Docker image tagging policy in the README.
+- Refactored Tavily search to use the official `@tavily/core` SDK instead of the hand-written HTTP client.
+- Normalized Tavily search options so only supported `topic` and `timeRange` values are forwarded to the SDK, avoiding malformed `400 Bad Request` payloads.
+- Added regression coverage for Tavily SDK option mapping and pre-aborted request handling.
+- Downgraded `one_extract` into a content preprocessing tool that returns scraped text blocks instead of advertising built-in LLM structured extraction.
 
 ## 2026-04-06
 

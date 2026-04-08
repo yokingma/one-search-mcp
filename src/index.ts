@@ -37,7 +37,7 @@ const DEFAULT_TIMEOUT = process.env.TIMEOUT ?? 10000;
 const server = new McpServer(
   {
     name: 'one-search-mcp',
-    version: '1.1.3',
+    version: '1.2.0',
   },
   {
     capabilities: {

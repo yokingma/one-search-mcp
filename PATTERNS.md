@@ -21,6 +21,19 @@
 - Published npm artifacts should exclude sourcemaps unless there is an explicit debugging requirement to ship them.
 - Docker release builds should publish only the exact semver tag and `latest`; avoid floating major-only or major-minor tags that can silently retarget existing deployments.
 
+## Tavily Search Integration
+
+- Tavily search should use the official `@tavily/core` SDK instead of a hand-written HTTP client.
+- Only forward Tavily options that the SDK explicitly supports; unsupported `categories` values should be omitted so Tavily falls back to its default topic.
+- Do not send empty `timeRange` values to Tavily. Normalize optional fields first so the request payload only contains valid values.
+- If a Tavily-backed request is already aborted before execution starts, fail fast before creating the SDK client or making an outbound request.
+
+## Extract Tool Scope
+
+- `one_extract` is a content preprocessing tool, not a built-in LLM extraction pipeline.
+- The extract input should only accept the URLs to preprocess; do not expose prompt, schema, or other pseudo-LLM options unless the server actually owns a model-backed extraction stage.
+- Extract responses should return scraped text blocks that downstream agents or applications can pass into their own models.
+
 ## Process Shutdown Cleanup
 
 - Install process cleanup handlers once at service startup.
