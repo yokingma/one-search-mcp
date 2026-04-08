@@ -113,12 +113,6 @@ export type ScrapeInput = z.infer<typeof ScrapeSchema>;
 // Extract Schema
 export const ExtractSchema = z.object({
   urls: z.array(z.string()).describe('List of URLs to extract information from'),
-  prompt: z.string().optional().describe('Prompt for the LLM extraction'),
-  systemPrompt: z.string().optional().describe('System prompt for LLM extraction'),
-  schema: z.record(z.any()).optional().describe('JSON schema for structured data extraction'),
-  allowExternalLinks: z.boolean().optional().describe('Allow extraction from external links'),
-  enableWebSearch: z.boolean().optional().describe('Enable web search for additional context'),
-  includeSubdomains: z.boolean().optional().describe('Include subdomains in extraction'),
-});
+}).strict();
 
 export type ExtractInput = z.infer<typeof ExtractSchema>;

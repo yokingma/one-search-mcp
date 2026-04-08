@@ -9,6 +9,7 @@ import { AgentBrowser } from './libs/agent-browser/index.js';
 import { activeBrowserRegistry } from './libs/agent-browser/registry.js';
 import { runBrowserTask } from './libs/agent-browser/task.js';
 import { processSearch } from './search/process-search.js';
+import { extractContentFromUrls } from './extract/process-extract.js';
 import { createToolHandler } from './server/tool-handler.js';
 import { installProcessCleanupHandlers } from './server/process-cleanup.js';
 import { installStdioDisconnectCleanupHandlers } from './server/stdio-cleanup.js';
@@ -256,7 +257,7 @@ async function processMapUrl(url: string, args: Omit<MapInput, 'url'>, signal?: 
 async function processExtract(args: ExtractInput, signal?: AbortSignal): Promise<{
   content: Array<{ type: 'text'; text: string }>;
 }> {
-  const { urls, prompt, systemPrompt, schema } = args;
+  const { urls } = args;
   const browser = new AgentBrowser({
     headless: true,
     timeout: 30000,
@@ -266,47 +267,7 @@ async function processExtract(args: ExtractInput, signal?: AbortSignal): Promise
     browser,
     signal,
     task: async () => {
-      const results: string[] = [];
-
-      // Extract content from each URL
-      for (const url of urls) {
-        try {
-          const res = await browser.scrapeUrl(url, {
-            formats: ['markdown'],
-            onlyMainContent: true,
-          });
-
-          if (res.success && res.markdown) {
-            results.push(`## Content from ${url}\n\n${res.markdown}`);
-          } else {
-            results.push(`## Failed to extract from ${url}\n\nError: ${res.error || 'Unknown error'}`);
-          }
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          results.push(`## Failed to extract from ${url}\n\nError: ${errorMsg}`);
-        }
-      }
-
-      let finalText = results.join('\n\n---\n\n');
-
-      // Add extraction instructions if provided
-      if (prompt || systemPrompt || schema) {
-        const instructions: string[] = [];
-
-        if (systemPrompt) {
-          instructions.push(`System Instructions: ${systemPrompt}`);
-        }
-
-        if (prompt) {
-          instructions.push(`Extraction Task: ${prompt}`);
-        }
-
-        if (schema) {
-          instructions.push(`Expected Schema:\n${JSON.stringify(schema, null, 2)}`);
-        }
-
-        finalText = `${instructions.join('\n\n')}\n\n---\n\nExtracted Content:\n\n${finalText}`;
-      }
+      const finalText = await extractContentFromUrls(urls, browser);
 
       return {
         content: [

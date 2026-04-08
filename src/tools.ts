@@ -21,6 +21,6 @@ export const SCRAPE_TOOL = {
 
 export const EXTRACT_TOOL = {
   name: 'one_extract',
-  description: 'Extract structured information from web pages using LLM. Supports both cloud AI and self-hosted LLM extraction.',
+  description: 'Fetch and preprocess page content from one or more URLs. Returns cleaned text blocks that can be passed to downstream tools or models.',
   schema: ExtractSchema,
 } as const;

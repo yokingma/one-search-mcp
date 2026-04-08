@@ -1,10 +1,10 @@
-# 🚀 OneSearch MCP Server: Web Search & Crawl & Scraper & Extract
+# 🚀 OneSearch MCP Server: Web Search & Crawl & Scraper & Content Prep
 
 A Model Context Protocol (MCP) server implementation that integrates with multiple search providers for web search, local browser search, and scraping capabilities with agent-browser.
 
 ## Features
 
-- Web Search, scrape, crawl and extract content from websites.
+- Web search, scrape, crawl and preprocess content from websites.
 - Support multiple search engines and web scrapers: **SearXNG**, **Tavily**, **DuckDuckGo**, **Bing**, **Google**, **Zhipu (智谱)**, **Exa**, **Bocha (博查)**, etc.
 - **Local web search** (browser search), support multiple search engines: **Bing**, **Google**, **Baidu**, **Sogou**, etc.
   - Use `agent-browser` for browser automation.
@@ -22,7 +22,7 @@ A Model Context Protocol (MCP) server implementation that integrates with multip
 **What Changed:**
 
 - `one_scrape` and `one_map` now use `agent-browser` instead of Firecrawl
-- `one_extract` tool is now fully implemented for structured data extraction from multiple URLs
+- `one_extract` now preprocesses multi-URL page content for downstream analysis instead of performing built-in LLM extraction
 - All browser-based operations are now handled locally, providing better privacy and no API costs
 
 **Migration Steps:**
