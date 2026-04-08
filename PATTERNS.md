@@ -19,6 +19,7 @@
 
 - Package version metadata must stay aligned across `package.json`, `package-lock.json`, `server.json`, and the MCP runtime version exposed from `src/index.ts`.
 - Published npm artifacts should exclude sourcemaps unless there is an explicit debugging requirement to ship them.
+- Docker release builds should publish only the exact semver tag and `latest`; avoid floating major-only or major-minor tags that can silently retarget existing deployments.
 
 ## Process Shutdown Cleanup
 

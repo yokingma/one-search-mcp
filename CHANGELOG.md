@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-04-08
+
+- Simplified Docker release tags so GitHub tag builds now publish only the exact semver tag and `latest`.
+- Documented the Docker image tagging policy in the README.
+
 ## 2026-04-06
 
 - Bumped the project version uniformly to `1.1.3` across npm/package metadata and MCP runtime metadata.
