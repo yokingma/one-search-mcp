@@ -63,4 +63,24 @@ describe('processSearch', () => {
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler.mock.calls[0]?.[1]).toBe(controller.signal);
   });
+
+  it('passes apiUrl into the searxng provider', async () => {
+    const handlers = createSearchHandlers();
+    const apiUrl = 'https://example.com/searxng';
+
+    await processSearch(
+      { query: 'mcp' },
+      {
+        provider: 'searxng',
+        apiKey: 'test-api-key',
+        apiUrl,
+        defaultSearchOptions: SEARCH_DEFAULT_OPTIONS,
+      },
+      undefined,
+      handlers,
+    );
+
+    expect(handlers.searxngSearch).toHaveBeenCalledTimes(1);
+    expect(handlers.searxngSearch.mock.calls[0]?.[0]).toMatchObject({ apiUrl });
+  });
 });

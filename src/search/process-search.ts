@@ -62,6 +62,7 @@ export async function processSearch(
         ...config.defaultSearchOptions,
         ...args,
         apiKey: config.apiKey,
+        apiUrl: config.apiUrl,
       };
 
       const { categories, language } = config.defaultSearchOptions;

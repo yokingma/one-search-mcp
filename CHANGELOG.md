@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-04-16
+
+- Fixed `searxng` provider routing so `processSearch(...)` now forwards `SEARCH_API_URL` / `apiUrl` into `searxngSearch(...)` again.
+- Added a regression test covering `apiUrl` propagation for the `searxng` branch in shared search dispatch.
+- Fixed `searxngSearch(...)` to use a protocol-correct `GET` request with URL query parameters instead of sending a `POST` request with an empty JSON body.
+- Normalized `searxng` time-range forwarding so unsupported values like `all` are omitted instead of being blindly passed through.
+- Improved `searxng` error handling so non-2xx responses and invalid JSON responses now surface clear provider-specific errors.
+- Added provider-level regression tests for `searxng` request construction and error handling.
+
 ## 2026-04-08
 
 - Bumped the project version uniformly to `1.2.0` across npm/package metadata and MCP runtime metadata.

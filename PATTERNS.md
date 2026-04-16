@@ -12,7 +12,11 @@
 
 - Search dispatch should live in a pure helper so provider routing can be regression-tested without starting the MCP server.
 - Every search provider branch must receive the caller `AbortSignal`; do not special-case `local` and forget remote providers.
+- Every provider branch must also forward the provider-specific configuration it depends on, such as `apiUrl` for `searxng` and `google`, instead of rebuilding a partial params object.
+- Match the upstream provider protocol exactly: if parameters are encoded in the URL, use `GET`; if the provider expects form data, send a form body. Do not mix `POST` with URL query parameters plus `Content-Type: application/json`.
+- Normalize provider-specific option ranges before sending requests. If a shared tool schema allows values that an upstream provider does not support, omit unsupported values instead of guessing a mapping.
 - HTTP-based providers should merge the caller signal with provider timeouts into one request signal so either condition cancels the upstream request immediately.
+- Check `response.ok` before parsing the response body, and throw a provider-specific HTTP error before any JSON decoding. If JSON decoding still fails on a successful response, throw a clear invalid-response error.
 - If a third-party SDK does not expose request cancellation, prefer a direct HTTP implementation over wrapping the SDK in `Promise.race(...)`, because returning early without canceling still burns upstream quota and local resources.
 
 ## Publish Artifacts

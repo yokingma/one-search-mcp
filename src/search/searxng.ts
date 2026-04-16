@@ -1,7 +1,8 @@
-import url from 'node:url';
 import { ISearchRequestOptions, ISearchResponse, ISearchResponseResult } from '../interface.js';
 import { searchLogger } from './logger.js';
 import { createRequestSignal } from './request-signal.js';
+
+const VALID_SEARXNG_TIME_RANGES = new Set(['day', 'month', 'year']);
 
 /**
  * SearxNG Search API
@@ -38,37 +39,46 @@ export async function searxngSearch(params: ISearchRequestOptions, signal?: Abor
   });
 
   try {
-    const config = {
+    const queryParams = new URLSearchParams({
       q: query,
-      pageno: page,
+      pageno: String(page),
       categories,
       format,
-      safesearch: safeSearch,
+      safesearch: String(safeSearch),
       language,
       engines,
-      time_range: timeRange,
-    };
+    });
 
-    const endpoint = `${apiUrl}/search`;
+    if (VALID_SEARXNG_TIME_RANGES.has(timeRange)) {
+      queryParams.set('time_range', timeRange);
+    }
 
-    const queryParams = url.format({ query: config });
-
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+    const headers: HeadersInit = {};
 
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const res = await fetch(`${endpoint}${queryParams}`, {
-      method: 'POST',
+    const res = await fetch(`${apiUrl}/search?${queryParams.toString()}`, {
+      method: 'GET',
       headers,
       signal: requestSignal.signal,
     });
-    const response = await res.json();
+
+    if (!res.ok) {
+      throw new Error(`SearxNG search failed: ${res.status} ${res.statusText}`);
+    }
+
+    let response: { results?: Array<Record<string, any>> };
+
+    try {
+      response = await res.json();
+    } catch {
+      throw new Error('SearxNG search returned invalid JSON response');
+    }
+
     if (response.results) {
-      const list = (response.results as Array<Record<string, any>>).slice(0, limit);
+      const list = response.results.slice(0, limit);
       const results: ISearchResponseResult[] = list.map((item: Record<string, any>) => {
         const image = item.img_src ? {
           thumbnail: item.thumbnail_src,
