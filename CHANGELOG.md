@@ -2,6 +2,7 @@
 
 ## 2026-04-16
 
+- Bumped the project version uniformly to `1.2.1` across npm/package metadata and MCP runtime metadata.
 - Fixed `searxng` provider routing so `processSearch(...)` now forwards `SEARCH_API_URL` / `apiUrl` into `searxngSearch(...)` again.
 - Added a regression test covering `apiUrl` propagation for the `searxng` branch in shared search dispatch.
 - Fixed `searxngSearch(...)` to use a protocol-correct `GET` request with URL query parameters instead of sending a `POST` request with an empty JSON body.
