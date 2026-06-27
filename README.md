@@ -150,13 +150,13 @@ docker pull zacma/one-search-mcp:latest
 
 ### Search Provider
 
-- **SEARCH_PROVIDER** (Optional): The search provider to use, supports `searxng`, `duckduckgo`, `bing`, `tavily`, `google`, `zhipu`, `exa`, `bocha`, `local`, default is `local`.
+- **SEARCH_PROVIDER** (Optional): The search provider to use, supports `searxng`, `duckduckgo`, `bing`, `tavily`, `google`, `zhipu`, `exa`, `bocha`, `sofya`, `local`, default is `local`.
 - **SEARCH_API_URL** (Optional): The URL of the SearxNG API, or Google Custom Search Engine ID for `google`.
-- **SEARCH_API_KEY** (Optional): The API key for the search provider, required for `tavily`, `bing`, `google`, `zhipu`, `exa`, `bocha`.
+- **SEARCH_API_KEY** (Optional): The API key for the search provider, required for `tavily`, `bing`, `google`, `zhipu`, `exa`, `bocha`, `sofya`.
 
 ```ts
 // supported search providers
-export type SearchProvider = 'searxng' | 'duckduckgo' | 'bing' | 'tavily' | 'google' | 'zhipu' | 'exa' | 'bocha' | 'local';
+export type SearchProvider = 'searxng' | 'duckduckgo' | 'bing' | 'tavily' | 'google' | 'zhipu' | 'exa' | 'bocha' | 'sofya' | 'local';
 ```
 
 ### Browser Network Security
@@ -178,6 +178,7 @@ Use `ALLOW_PRIVATE_NETWORK=true` only in trusted deployments. When enabled, prom
 | `zhipu` | Yes | No | [智谱 AI](https://bigmodel.cn/dev/api/search-tool/web-search) |
 | `exa` | Yes | No | [Exa AI](https://exa.ai/) |
 | `bocha` | Yes | No | [博查 AI](https://open.bochaai.com/) |
+| `sofya` | Yes | No | [Sofya](https://sofya.co/) |
 
 ## Configuration for Other MCP Clients
 

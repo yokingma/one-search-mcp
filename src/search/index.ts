@@ -7,4 +7,5 @@ export * from './google.js';
 export * from './zhipu.js';
 export * from './exa.js';
 export * from './bocha.js';
+export * from './sofya.js';
 export * from './logger.js';
