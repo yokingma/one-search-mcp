@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server implementation that integrates with multip
 
 ## Features
 
-- Web search, scrape, crawl and preprocess content from websites.
+- Web search, scrape, crawl, and preprocess content from websites.
 - Support multiple search engines and web scrapers: **SearXNG**, **Tavily**, **DuckDuckGo**, **Bing**, **Google**, **Zhipu (智谱)**, **Exa**, **Bocha (博查)**, etc.
 - **Local web search** (browser search), support multiple search engines: **Bing**, **Google**, **Baidu**, **Sogou**, etc.
   - Use `agent-browser` for browser automation.
@@ -16,7 +16,7 @@ A Model Context Protocol (MCP) server implementation that integrates with multip
 **Breaking Changes in v1.1.0:**
 
 - **Firecrawl Removed**: The Firecrawl integration has been removed in favor of `agent-browser`, which provides similar functionality without requiring external API services.
-- **New Browser Requirement**: You must install Chromium browser (see Prerequisites section).
+- **New Browser Requirement**: You must install the Chromium browser (see Prerequisites section).
 - **Environment Variables**: `FIRECRAWL_API_URL` and `FIRECRAWL_API_KEY` are no longer used.
 
 **What Changed:**
