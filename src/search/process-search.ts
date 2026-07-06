@@ -9,6 +9,7 @@ import {
   googleSearch,
   localSearch,
   searxngSearch,
+  youcomSearch,
   tavilySearch,
   zhipuSearch,
 } from './index.js';
@@ -29,6 +30,7 @@ export interface SearchHandlers {
   zhipuSearch: SearchHandler;
   exaSearch: SearchHandler;
   bochaSearch: SearchHandler;
+  youcomSearch: SearchHandler;
 }
 
 export interface SearchProcessConfig {
@@ -48,6 +50,7 @@ export const defaultSearchHandlers: SearchHandlers = {
   zhipuSearch: async (options, signal) => await zhipuSearch(options, signal),
   exaSearch: async (options, signal) => await exaSearch(options, signal),
   bochaSearch: async (options, signal) => await bochaSearch(options, signal),
+  youcomSearch: async (options, signal) => await youcomSearch(options, signal),
 };
 
 export async function processSearch(
@@ -126,6 +129,12 @@ export async function processSearch(
       }, signal);
     case 'bocha':
       return await handlers.bochaSearch({
+        ...config.defaultSearchOptions,
+        ...args,
+        apiKey: config.apiKey,
+      }, signal);
+    case 'youcom':
+      return await handlers.youcomSearch({
         ...config.defaultSearchOptions,
         ...args,
         apiKey: config.apiKey,

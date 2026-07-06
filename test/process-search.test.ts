@@ -18,6 +18,7 @@ function createSearchHandlers(): SearchHandlers {
     zhipuSearch: vi.fn(async () => SEARCH_SUCCESS),
     exaSearch: vi.fn(async () => SEARCH_SUCCESS),
     bochaSearch: vi.fn(async () => SEARCH_SUCCESS),
+    youcomSearch: vi.fn(async () => SEARCH_SUCCESS),
   };
 }
 
@@ -43,6 +44,7 @@ describe('processSearch', () => {
     { provider: 'zhipu', handlerKey: 'zhipuSearch' },
     { provider: 'exa', handlerKey: 'exaSearch' },
     { provider: 'bocha', handlerKey: 'bochaSearch' },
+    { provider: 'youcom', handlerKey: 'youcomSearch' },
   ] as const)('passes the abort signal into the $provider provider', async ({ provider, handlerKey }) => {
     const handlers = createSearchHandlers();
     const controller = new AbortController();
