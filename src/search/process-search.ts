@@ -10,6 +10,7 @@ import {
   localSearch,
   searxngSearch,
   tavilySearch,
+  ydcSearch,
   zhipuSearch,
 } from './index.js';
 
@@ -29,6 +30,7 @@ export interface SearchHandlers {
   zhipuSearch: SearchHandler;
   exaSearch: SearchHandler;
   bochaSearch: SearchHandler;
+  ydcSearch: SearchHandler;
 }
 
 export interface SearchProcessConfig {
@@ -48,6 +50,7 @@ export const defaultSearchHandlers: SearchHandlers = {
   zhipuSearch: async (options, signal) => await zhipuSearch(options, signal),
   exaSearch: async (options, signal) => await exaSearch(options, signal),
   bochaSearch: async (options, signal) => await bochaSearch(options, signal),
+  ydcSearch: async (options, signal) => await ydcSearch(options, signal),
 };
 
 export async function processSearch(
@@ -126,6 +129,12 @@ export async function processSearch(
       }, signal);
     case 'bocha':
       return await handlers.bochaSearch({
+        ...config.defaultSearchOptions,
+        ...args,
+        apiKey: config.apiKey,
+      }, signal);
+    case 'ydc':
+      return await handlers.ydcSearch({
         ...config.defaultSearchOptions,
         ...args,
         apiKey: config.apiKey,

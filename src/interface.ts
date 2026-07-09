@@ -49,5 +49,6 @@ export type SearchProvider =
   | 'google'
   | 'zhipu'
   | 'exa'
-  | 'bocha';
+  | 'bocha'
+  | 'ydc';
 export type SearchTimeRange = 'year' | 'month' | 'week' | 'day';
