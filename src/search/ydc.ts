@@ -56,12 +56,18 @@ export async function ydcSearch(options: ISearchRequestOptions, signal?: AbortSi
   const url = new URL(SEARCH_ENDPOINT);
   url.searchParams.set('query', query);
   url.searchParams.set('count', String(limit));
-  if (options.language) url.searchParams.set('language', options.language);
-  if (options.timeRange) url.searchParams.set('freshness', options.timeRange);
+  
+  // Normalize shared defaults - omit values that are not valid for You.com API
+  if (options.language && options.language !== 'auto') {
+    url.searchParams.set('language', options.language);
+  }
+  if (options.timeRange && options.timeRange !== 'all' && options.timeRange.trim()) {
+    url.searchParams.set('freshness', options.timeRange);
+  }
   if (options.safeSearch !== undefined) {
     url.searchParams.set('safesearch', ['off', 'moderate', 'strict'][options.safeSearch] ?? 'moderate');
   }
-  if (options.engines && options.engines !== 'all') url.searchParams.set('livecrawl', 'web');
+  // Remove engines mapping - livecrawl adds per-page cost and should be explicit
 
   const controller = new AbortController();
   const timeoutMs = resolveTimeoutMs(options.timeout);

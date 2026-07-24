@@ -83,4 +83,88 @@ describe('ydcSearch', () => {
     await expect(ydcSearch({ query: 'mcp' })).rejects.toThrow('YDC API key is required');
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  it('normalizes shared defaults - omits language when auto', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: { web: [], news: [] } }),
+      text: async () => '',
+    });
+
+    await ydcSearch({
+      query: 'test',
+      apiKey: 'test-key',
+      language: 'auto',
+    });
+
+    const [requestUrl] = mockFetch.mock.calls[0] ?? [];
+    expect(String(requestUrl)).not.toContain('language=auto');
+  });
+
+  it('normalizes shared defaults - omits freshness when timeRange is all', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: { web: [], news: [] } }),
+      text: async () => '',
+    });
+
+    await ydcSearch({
+      query: 'test',
+      apiKey: 'test-key',
+      timeRange: 'all',
+    });
+
+    const [requestUrl] = mockFetch.mock.calls[0] ?? [];
+    expect(String(requestUrl)).not.toContain('freshness=all');
+  });
+
+  it('normalizes shared defaults - omits freshness when timeRange is empty', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: { web: [], news: [] } }),
+      text: async () => '',
+    });
+
+    await ydcSearch({
+      query: 'test',
+      apiKey: 'test-key',
+      timeRange: '   ',
+    });
+
+    const [requestUrl] = mockFetch.mock.calls[0] ?? [];
+    expect(String(requestUrl)).not.toContain('freshness=');
+  });
+
+  it('respects total limit when combining web and news results', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: {
+          web: [
+            { url: 'https://web1.com', title: 'Web 1' },
+            { url: 'https://web2.com', title: 'Web 2' },
+            { url: 'https://web3.com', title: 'Web 3' },
+          ],
+          news: [
+            { url: 'https://news1.com', title: 'News 1' },
+            { url: 'https://news2.com', title: 'News 2' },
+          ],
+        },
+      }),
+      text: async () => '',
+    });
+
+    const result = await ydcSearch({
+      query: 'test',
+      apiKey: 'test-key',
+      limit: 3,
+    });
+
+    expect(result.results).toHaveLength(3);
+    expect(result.results.map(r => r.url)).toEqual([
+      'https://web1.com',
+      'https://web2.com', 
+      'https://web3.com',
+    ]);
+  });
 });
