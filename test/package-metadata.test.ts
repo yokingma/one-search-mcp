@@ -108,8 +108,8 @@ describe('package metadata', () => {
     expect(variablesByName.get('SEARCH_API_URL')).toContain(
       'Google Custom Search Engine ID for google',
     );
-    expect(variablesByName.get('SEARCH_API_KEY')).toContain(
-      'tavily, bing, google, zhipu, exa, bocha, ydc',
+    expect(variablesByName.get('SEARCH_API_KEY')).toBe(
+      'API key for search provider (required for tavily, bing, google, zhipu, exa, bocha)',
     );
     expect(variablesByName.get('YDC_API_KEY')).toContain(
       'You.com API key for ydc provider',

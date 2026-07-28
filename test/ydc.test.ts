@@ -163,7 +163,7 @@ describe('ydcSearch', () => {
     expect(result.results).toHaveLength(3);
     expect(result.results.map(r => r.url)).toEqual([
       'https://web1.com',
-      'https://web2.com', 
+      'https://web2.com',
       'https://web3.com',
     ]);
   });

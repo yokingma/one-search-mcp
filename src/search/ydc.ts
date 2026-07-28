@@ -56,7 +56,7 @@ export async function ydcSearch(options: ISearchRequestOptions, signal?: AbortSi
   const url = new URL(SEARCH_ENDPOINT);
   url.searchParams.set('query', query);
   url.searchParams.set('count', String(limit));
-  
+
   // Normalize shared defaults - omit values that are not valid for You.com API
   if (options.language && options.language !== 'auto') {
     url.searchParams.set('language', options.language);
@@ -67,7 +67,7 @@ export async function ydcSearch(options: ISearchRequestOptions, signal?: AbortSi
   if (options.safeSearch !== undefined) {
     url.searchParams.set('safesearch', ['off', 'moderate', 'strict'][options.safeSearch] ?? 'moderate');
   }
-  // Remove engines mapping - livecrawl adds per-page cost and should be explicit
+  // Live crawling is intentionally not inferred from engines because it incurs per-page cost.
 
   const controller = new AbortController();
   const timeoutMs = resolveTimeoutMs(options.timeout);
