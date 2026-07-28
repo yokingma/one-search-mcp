@@ -24,6 +24,7 @@ dotenvx.config({ quiet: true });
 const SEARCH_API_URL = process.env.SEARCH_API_URL;
 const SEARCH_API_KEY = process.env.SEARCH_API_KEY;
 const SEARCH_PROVIDER: SearchProvider = process.env.SEARCH_PROVIDER as SearchProvider ?? 'local';
+const YDC_API_KEY = process.env.YDC_API_KEY;
 
 // search query params
 const SAFE_SEARCH = process.env.SAFE_SEARCH ?? 0;
@@ -88,7 +89,7 @@ server.registerTool(
       args,
       {
         provider: SEARCH_PROVIDER,
-        apiKey: SEARCH_API_KEY ?? '',
+        apiKey: SEARCH_PROVIDER === 'ydc' ? (YDC_API_KEY ?? '') : (SEARCH_API_KEY ?? ''),
         apiUrl: SEARCH_API_URL,
         defaultSearchOptions: searchDefaultConfig,
       },

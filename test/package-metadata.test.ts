@@ -103,13 +103,16 @@ describe('package metadata', () => {
     );
 
     expect(variablesByName.get('SEARCH_PROVIDER')).toContain(
-      'searxng, duckduckgo, bing, tavily, google, zhipu, exa, bocha, local',
+      'searxng, duckduckgo, bing, tavily, google, zhipu, exa, bocha, ydc, local',
     );
     expect(variablesByName.get('SEARCH_API_URL')).toContain(
       'Google Custom Search Engine ID for google',
     );
-    expect(variablesByName.get('SEARCH_API_KEY')).toContain(
-      'tavily, bing, google, zhipu, exa, bocha',
+    expect(variablesByName.get('SEARCH_API_KEY')).toBe(
+      'API key for search provider (required for tavily, bing, google, zhipu, exa, bocha)',
+    );
+    expect(variablesByName.get('YDC_API_KEY')).toContain(
+      'You.com API key for ydc provider',
     );
     expect(variablesByName.get('ALLOW_PRIVATE_NETWORK')).toContain(
       'private, loopback, and link-local network targets',
