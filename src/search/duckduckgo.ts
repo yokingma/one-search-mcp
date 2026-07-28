@@ -1,6 +1,6 @@
-import * as DDG from 'duck-duck-scrape';
+import * as DDG from 'ddg-kit';
 import asyncRetry from 'async-retry';
-import type { SearchOptions } from 'duck-duck-scrape';
+import type { SearchOptions } from 'ddg-kit';
 import { ISearchRequestOptions, ISearchResponse } from '../interface.js';
 import { searchLogger } from './logger.js';
 
@@ -18,16 +18,24 @@ export async function duckDuckGoSearch(
     const res = await asyncRetry(
       async (bail) => {
         try {
-          return await DDG.search(query, {
-            ...searchOptions,
-            safeSearch,
-          }, {
-            response_timeout: timeout,
-            signal,
-          });
+          return await DDG.search(
+            query,
+            {
+              ...searchOptions,
+              safeSearch,
+            },
+            {
+              timeoutMs: Number(timeout),
+              signal,
+            },
+          );
         } catch (error) {
           if (signal?.aborted) {
-            bail(signal.reason ?? error);
+            return bail(signal.reason ?? error);
+          }
+
+          if (error instanceof DDG.DdgError && (error.code === 'BOT_CHALLENGE' || !error.retryable)) {
+            return bail(error);
           }
 
           throw error;

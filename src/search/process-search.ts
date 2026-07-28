@@ -1,5 +1,5 @@
-import { SafeSearchType } from 'duck-duck-scrape';
-import type { SearchOptions } from 'duck-duck-scrape';
+import { SafeSearchType } from 'ddg-kit';
+import type { SearchOptions } from 'ddg-kit';
 import type { ISearchRequestOptions, ISearchResponse, SearchProvider } from '../interface.js';
 import {
   bingSearch,
