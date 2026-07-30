@@ -8,4 +8,5 @@ export * from './zhipu.js';
 export * from './exa.js';
 export * from './bocha.js';
 export * from './ydc.js';
+export * from './serpbase.js';
 export * from './logger.js';

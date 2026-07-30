@@ -17,7 +17,7 @@
       },
       "environmentVariables": [
         {
-          "description": "Search provider to use (searxng, duckduckgo, bing, tavily, google, zhipu, exa, bocha, ydc, local)",
+          "description": "Search provider to use (searxng, duckduckgo, bing, tavily, google, zhipu, exa, bocha, ydc, serpbase, local)",
           "isRequired": false,
           "format": "string",
           "isSecret": false,
@@ -43,6 +43,13 @@
           "format": "string",
           "isSecret": true,
           "name": "YDC_API_KEY"
+        },
+        {
+          "description": "SerpBase API key for serpbase provider (get one at https://serpbase.dev)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "SERPBASE_API_KEY"
         },
         {
           "description": "Allow browser-backed tools to access private, loopback, and link-local network targets when set to true",

@@ -50,5 +50,6 @@ export type SearchProvider =
   | 'zhipu'
   | 'exa'
   | 'bocha'
-  | 'ydc';
+  | 'ydc'
+  | 'serpbase';
 export type SearchTimeRange = 'year' | 'month' | 'week' | 'day';

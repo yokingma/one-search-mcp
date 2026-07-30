@@ -11,6 +11,7 @@ import {
   searxngSearch,
   tavilySearch,
   ydcSearch,
+  serpbaseSearch,
   zhipuSearch,
 } from './index.js';
 
@@ -31,6 +32,7 @@ export interface SearchHandlers {
   exaSearch: SearchHandler;
   bochaSearch: SearchHandler;
   ydcSearch: SearchHandler;
+  serpbaseSearch: SearchHandler;
 }
 
 export interface SearchProcessConfig {
@@ -51,6 +53,7 @@ export const defaultSearchHandlers: SearchHandlers = {
   exaSearch: async (options, signal) => await exaSearch(options, signal),
   bochaSearch: async (options, signal) => await bochaSearch(options, signal),
   ydcSearch: async (options, signal) => await ydcSearch(options, signal),
+  serpbaseSearch: async (options, signal) => await serpbaseSearch(options, signal),
 };
 
 export async function processSearch(
@@ -135,6 +138,12 @@ export async function processSearch(
       }, signal);
     case 'ydc':
       return await handlers.ydcSearch({
+        ...config.defaultSearchOptions,
+        ...args,
+        apiKey: config.apiKey,
+      }, signal);
+    case 'serpbase':
+      return await handlers.serpbaseSearch({
         ...config.defaultSearchOptions,
         ...args,
         apiKey: config.apiKey,
