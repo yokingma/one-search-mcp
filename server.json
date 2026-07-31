@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.yokingma/one-search-mcp",
-  "description": "Web search, URL discovery, scrape & extract with agent-browser, SearXNG, Tavily, DuckDuckGo, Bing & more",
+  "description": "Web search, URL discovery, scraping & extraction with agent-browser and search providers",
   "repository": {
     "url": "https://github.com/yokingma/one-search-mcp",
     "source": "github"

@@ -53,7 +53,10 @@
 ## Publish Artifacts
 
 - Package version metadata must stay aligned across `package.json`, `package-lock.json`, `server.json`, and the MCP runtime version exposed from `src/index.ts`.
+- Keep the npm repository URL in its canonical `git+https://...git` form so publish validation does not rewrite package metadata.
+- Keep the root `server.json` description at 100 characters or fewer for MCP Registry validation.
 - Published npm artifacts should exclude sourcemaps unless there is an explicit debugging requirement to ship them.
+- Keep npm release checks in `prepublishOnly` so every directory publish runs tests, lint, build, and `npm pack --dry-run` before uploading an artifact.
 - Docker release builds should publish only the exact semver tag and `latest`; avoid floating major-only or major-minor tags that can silently retarget existing deployments.
 - Keep local MCP debugging entrypoints discoverable through stable `npm` scripts so developers can launch the official MCP Inspector against both source and built server entrypoints without reconstructing nested `npx` commands by hand.
 

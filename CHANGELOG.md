@@ -4,6 +4,9 @@
 
 - Fixed DuckDuckGo safe-search dispatch so the documented shared values now map correctly: `0` to off, `1` to moderate, and `2` to strict.
 - Added regression coverage for every DuckDuckGo safe-search level at the shared search-dispatch boundary.
+- Added a guarded npm release flow that runs tests, lint, build, and package verification before publishing.
+- Normalized npm repository metadata so publishing no longer needs npm to correct the package manifest.
+- Shortened the MCP Registry description to comply with its 100-character validation limit.
 
 ## 2026-07-03
 

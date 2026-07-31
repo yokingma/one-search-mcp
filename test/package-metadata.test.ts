@@ -7,6 +7,9 @@ const ROOT_DIR = path.resolve(import.meta.dirname, '..');
 interface PackageJson {
   version: string;
   dependencies?: Record<string, string>;
+  repository?: {
+    url?: string;
+  };
   scripts?: Record<string, string>;
   tsup?: {
     sourcemap?: boolean;
@@ -15,6 +18,7 @@ interface PackageJson {
 
 interface ServerJson {
   version: string;
+  description?: string;
   packages?: Array<{
     version: string;
     environmentVariables?: Array<{
@@ -95,6 +99,12 @@ describe('package metadata', () => {
     expect(isVersionAtLeast(parseSemver(sdkVersionRange!), MIN_MCP_SDK_VERSION)).toBe(true);
   });
 
+  it('uses npm-compatible repository metadata', async () => {
+    const packageJson = await readJsonFile<PackageJson>('package.json');
+
+    expect(packageJson.repository?.url).toBe('git+https://github.com/yokingma/one-search-mcp.git');
+  });
+
   it('documents all supported search provider environment variables in server.json', async () => {
     const serverJson = await readJsonFile<ServerJson>('server.json');
     const environmentVariables = serverJson.packages?.[0]?.environmentVariables ?? [];
@@ -119,6 +129,12 @@ describe('package metadata', () => {
     );
   });
 
+  it('keeps the registry description within its maximum length', async () => {
+    const serverJson = await readJsonFile<ServerJson>('server.json');
+
+    expect(serverJson.description?.length).toBeLessThanOrEqual(100);
+  });
+
   it('exposes MCP Inspector scripts for source and built server entrypoints', async () => {
     const packageJson = await readJsonFile<PackageJson>('package.json');
 
@@ -128,5 +144,17 @@ describe('package metadata', () => {
     expect(packageJson.scripts?.['inspector:build']).toBe(
       'npm run build && npx -y @modelcontextprotocol/inspector node dist/index.js',
     );
+  });
+
+  it('runs release checks before publishing to npm', async () => {
+    const packageJson = await readJsonFile<PackageJson>('package.json');
+    const releaseCheck = packageJson.scripts?.['release:check'];
+
+    expect(releaseCheck).toContain('npm test');
+    expect(releaseCheck).toContain('npm run lint');
+    expect(releaseCheck).toContain('npm run build');
+    expect(releaseCheck).toContain('npm pack --dry-run');
+    expect(packageJson.scripts?.prepublishOnly).toBe('npm run release:check');
+    expect(packageJson.scripts?.release).toBe('npm publish');
   });
 });

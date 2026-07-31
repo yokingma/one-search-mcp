@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yokingma/one-search-mcp.git"
+    "url": "git+https://github.com/yokingma/one-search-mcp.git"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -51,7 +51,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src",
-    "lint:fix": "eslint src --fix"
+    "lint:fix": "eslint src --fix",
+    "release:check": "npm test && npm run lint && npm run build && npm pack --dry-run",
+    "prepublishOnly": "npm run release:check",
+    "release": "npm publish"
   },
   "tsup": {
     "entry": [
