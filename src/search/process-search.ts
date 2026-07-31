@@ -93,8 +93,8 @@ export async function processSearch(
         apiKey: config.apiKey,
       }, signal);
     case 'duckduckgo': {
-      const safeSearch = args.safeSearch ?? 0;
-      const safeSearchOptions = [SafeSearchType.STRICT, SafeSearchType.MODERATE, SafeSearchType.OFF];
+      const safeSearch = args.safeSearch ?? config.defaultSearchOptions.safeSearch ?? 0;
+      const safeSearchOptions = [SafeSearchType.OFF, SafeSearchType.MODERATE, SafeSearchType.STRICT];
 
       return await handlers.duckDuckGoSearch({
         ...config.defaultSearchOptions,

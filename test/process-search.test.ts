@@ -1,3 +1,4 @@
+import { SafeSearchType } from 'duck-duck-scrape';
 import { describe, expect, it, vi } from 'vitest';
 import type { ISearchResponse } from '../src/interface.ts';
 import { processSearch, type SearchHandlers } from '../src/search/process-search.ts';
@@ -84,5 +85,33 @@ describe('processSearch', () => {
 
     expect(handlers.searxngSearch).toHaveBeenCalledTimes(1);
     expect(handlers.searxngSearch.mock.calls[0]?.[0]).toMatchObject({ apiUrl });
+  });
+
+  it.each([
+    { defaultSafeSearch: 0, expectedSafeSearch: SafeSearchType.OFF },
+    { defaultSafeSearch: 1, expectedSafeSearch: SafeSearchType.MODERATE },
+    { defaultSafeSearch: 2, expectedSafeSearch: SafeSearchType.STRICT },
+  ] as const)('maps the DuckDuckGo default safeSearch=$defaultSafeSearch to its documented filtering level', async ({
+    defaultSafeSearch,
+    expectedSafeSearch,
+  }) => {
+    const handlers = createSearchHandlers();
+
+    await processSearch(
+      { query: 'mcp' },
+      {
+        provider: 'duckduckgo',
+        defaultSearchOptions: {
+          ...SEARCH_DEFAULT_OPTIONS,
+          safeSearch: defaultSafeSearch,
+        },
+      },
+      undefined,
+      handlers,
+    );
+
+    expect(handlers.duckDuckGoSearch.mock.calls[0]?.[0]).toMatchObject({
+      safeSearch: expectedSafeSearch,
+    });
   });
 });

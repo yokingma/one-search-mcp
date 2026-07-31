@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-07-31
+
+- Fixed DuckDuckGo safe-search dispatch so the documented shared values now map correctly: `0` to off, `1` to moderate, and `2` to strict.
+- Added regression coverage for every DuckDuckGo safe-search level at the shared search-dispatch boundary.
+
 ## 2026-07-03
 
 - Bumped the project version uniformly to `1.2.3` across npm/package metadata and MCP runtime metadata.

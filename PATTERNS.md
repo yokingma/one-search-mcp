@@ -1,5 +1,10 @@
 # Patterns
 
+## Shared Safe-Search Semantics
+
+- Preserve the shared search contract across providers: `safeSearch` values mean `0` off, `1` moderate, and `2` strict.
+- Map those documented levels explicitly to each provider's native values, and cover all three values in dispatch tests so provider enum ordering cannot invert the public API.
+
 ## Honest Browser-Backed Tool Schemas
 
 - Browser-backed MCP tool schemas must only expose behavior that the current wrapper implementation actually honors.
